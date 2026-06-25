@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Bank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#16202e; --soft:#5c6775; --faint:#8a93a0;
+  --line:#dce1e7; --line2:#eceff3; --navy:#1f3a5f; --navy2:#2d5483;
+  --copper:#b26a3c; --copper-deep:#92531f; --copper-soft:#f3e6da;
+  --ok:#3f7a45; --warn:#b2412f;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--font-ui);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--navy2)}
+
+header{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;border-bottom:3px solid var(--copper)}
+.bar{display:flex;align-items:center;gap:16px;padding:12px 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.mark{font-family:var(--font-mono);font-weight:600;letter-spacing:.04em}
+.mark .dia{color:var(--copper);margin-right:6px}
+.brand small{color:#aebfd4;font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.src{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px}
+.dot{width:8px;height:8px;border-radius:50%;background:#8a93a0}
+.dot.live{background:#7fd18a;box-shadow:0 0 0 3px rgba(127,209,138,.25)}
+.dot.err{background:#e08a7c;box-shadow:0 0 0 3px rgba(178,65,47,.25)}
+.src button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 9px;font-size:11px;font-family:var(--font-mono)}
+.src button:hover{background:rgba(255,255,255,.22)}
+
+.controls{display:flex;align-items:center;gap:10px;padding:10px 20px;background:#26456c;flex-wrap:wrap}
+.controls .search{flex:1;min-width:180px;display:flex;align-items:center;background:#fff;border-radius:7px;padding:0 10px}
+.controls .search input{border:0;outline:0;padding:8px 6px;width:100%;font-family:var(--font-ui);font-size:13px;background:transparent}
+.controls .search span{color:var(--faint);font-family:var(--font-mono);font-size:12px}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.preset{background:rgba(255,255,255,.1);color:#dce6f2;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 11px;font-size:12px;font-family:var(--font-mono)}
+.preset:hover{background:rgba(255,255,255,.2)}
+.preset.on{background:var(--copper);border-color:var(--copper);color:#fff}
+
+.workspace{display:grid;grid-template-columns:1fr 390px;gap:0;align-items:start}
+.left{padding:18px 20px 60px;min-width:0}
+.filters{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:0 2px 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.filters.hide{display:none}
+.fgroup{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.flabel{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:2px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 9px;font-size:12px;color:var(--soft);font-family:var(--font-mono)}
+.chip:hover{border-color:var(--navy2);color:var(--ink)}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.chip .ct{opacity:.6;margin-left:5px}
+.toggle{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--soft)}
+.toggle input{accent-color:var(--copper);width:15px;height:15px}
+
+.tag{font-family:var(--font-mono);font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:4px;letter-spacing:.03em}
+[data-tag=RTL]{background:#deebf7;color:#235a8a}
+[data-tag=HLS]{background:#d6f0ee;color:#16746d}
+[data-tag=ARCH]{background:#e8e0f4;color:#5e4593}
+[data-tag=ML]{background:#fbe6d4;color:#a85b18}
+[data-tag=EMB]{background:#e0efe1;color:#357a3c}
+[data-tag=SW]{background:#e9ecef;color:#54606e}
+[data-tag=LEAD]{background:#fbf1d2;color:#8a6c12}
+[data-tag=EDU]{background:#e6eef6;color:#2c5c8a}
+[data-tag=TITLE]{background:#e4e4e4;color:#444}
+
+.grp{margin-bottom:22px}
+.grp h3{margin:0 0 2px;font-size:11px;font-family:var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--copper-deep)}
+.grp h4{margin:8px 0 8px;font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:baseline;gap:8px}
+.grp h4 .ent-src{font-family:var(--font-mono);font-size:10px;color:var(--faint);font-weight:400}
+.item{display:flex;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);margin-bottom:7px;transition:border-color .12s,box-shadow .12s}
+.item:hover{border-color:#c2ccd8;box-shadow:0 1px 3px rgba(20,32,46,.06)}
+.item.sel{border-color:var(--copper);box-shadow:0 0 0 1px var(--copper) inset;background:#fffaf5}
+.item .box{flex:none;margin-top:2px}
+.item .box input{width:17px;height:17px;accent-color:var(--copper);cursor:pointer}
+.item .body{min-width:0;flex:1}
+.item .txt{font-size:13.5px;color:var(--ink)}
+.item .meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px}
+.star{color:var(--copper);font-size:13px;line-height:1}
+.num{font-family:var(--font-mono);font-size:11px;color:var(--soft);background:var(--line2);padding:1px 6px;border-radius:4px}
+.srcbadge{font-family:var(--font-mono);font-size:10px;color:var(--faint)}
+.note{font-size:11.5px;color:var(--warn);font-style:italic;margin-top:5px;display:flex;gap:5px}
+.note::before{content:"!";font-family:var(--font-mono);font-style:normal;font-weight:600;color:var(--warn)}
+
+.empty{padding:46px 20px;text-align:center;color:var(--faint)}
+.empty b{display:block;color:var(--soft);font-size:15px;margin-bottom:6px}
+.onboard{max-width:440px;margin:48px auto;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:34px 30px}
+.onboard .dia{font-family:var(--font-mono);font-size:34px;color:var(--copper)}
+.onboard h2{margin:10px 0 6px;font-size:18px}
+.onboard p{color:var(--soft);font-size:13px;margin:0 0 18px}
+.onboard.err{border-color:#eccfc9;background:#fdf6f4}
+.onboard .cols{font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-top:16px}
+
+.tray{position:sticky;top:118px;height:calc(100vh - 118px);border-left:1px solid var(--line);background:#fbfcfd;display:flex;flex-direction:column}
+.tray .top{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.tray .ttl{display:flex;align-items:center;justify-content:space-between}
+.tray .ttl h2{margin:0;font-size:13px;font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
+.tray .ttl .cnt{font-family:var(--font-mono);font-size:12px;color:var(--copper-deep);font-weight:600}
+.meter{margin-top:10px}
+.meter .track{height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+.meter .fill{height:100%;background:linear-gradient(90deg,var(--navy2),var(--copper));width:0;transition:width .25s}
+.meter .lbl{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10.5px;color:var(--soft);margin-top:5px}
+.meter.over .fill{background:var(--warn)}
+.meter.over .lbl{color:var(--warn)}
+.traylist{flex:1;overflow:auto;padding:10px 14px}
+.tgrp{margin-bottom:13px}
+.tgrp .tsec{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;color:var(--copper-deep);text-transform:uppercase}
+.tgrp .tent{font-size:12px;font-weight:600;margin:2px 0 5px;color:var(--ink)}
+.titem{display:flex;gap:8px;font-size:12px;color:var(--soft);padding:3px 0;border-bottom:1px dashed var(--line2)}
+.titem .rm{flex:none;border:0;background:transparent;color:var(--faint);font-family:var(--font-mono);padding:0 2px;line-height:1}
+.titem .rm:hover{color:var(--warn)}
+.titem span{min-width:0}
+.tray .actions{padding:12px 14px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:7px;padding:9px 10px;font-size:12.5px;font-weight:500}
+.btn:hover{background:var(--navy2)}
+.btn.ghost{background:transparent;color:var(--navy)}
+.btn.ghost:hover{background:#eaf0f7}
+.trayempty{padding:36px 18px;text-align:center;color:var(--faint);font-size:13px}
+.trayempty .big{font-family:var(--font-mono);color:var(--copper);font-size:26px;margin-bottom:8px}
+
+.trayfab{display:none}
+@media(max-width:880px){
+  .workspace{grid-template-columns:1fr}
+  .tray{position:fixed;inset:0;top:auto;height:80vh;border-left:0;border-top:2px solid var(--copper);border-radius:14px 14px 0 0;transform:translateY(102%);transition:transform .25s;z-index:40;box-shadow:0 -8px 30px rgba(20,32,46,.18)}
+  .tray.open{transform:translateY(0)}
+  .trayfab{display:flex;position:fixed;right:16px;bottom:16px;z-index:41;background:var(--copper);color:#fff;border:0;border-radius:999px;padding:13px 18px;font-weight:600;font-size:14px;box-shadow:0 6px 18px rgba(146,83,31,.4);align-items:center;gap:8px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+dialog{border:0;border-radius:12px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 60px rgba(20,32,46,.3)}
+dialog::backdrop{background:rgba(20,32,46,.45)}
+.dlg{padding:22px 24px}
+.dlg h3{margin:0 0 4px;font-size:16px}
+.dlg p{color:var(--soft);font-size:13px;margin:0 0 14px}
+.dlg input[type=url]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-family:var(--font-mono);font-size:12px}
+.dlg ol{color:var(--soft);font-size:12.5px;padding-left:18px;margin:14px 0}
+.dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.dlg code{font-family:var(--font-mono);font-size:11px;background:var(--line2);padding:1px 5px;border-radius:4px}
+.status{font-size:12px;margin-top:8px;font-family:var(--font-mono)}
+.status.err{color:var(--warn)}
+.status.ok{color:var(--ok)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">
+      <span class="mark"><span class="dia">◇</span>RESUME BANK</span>
+      <small>line-item assembler</small>
+    </div>
+    <div class="src">
+      <span class="dot" id="srcDot"></span>
+      <span id="srcLabel">…</span>
+      <button id="refreshBtn" title="Re-pull from the sheet">Refresh</button>
+      <button id="cfgBtn" title="Connect a Google Sheet">Source</button>
+    </div>
+  </div>
+  <div class="controls">
+    <label class="search"><span>⌕</span><input id="q" type="search" placeholder="Search bullets, entries, notes…" autocomplete="off"></label>
+    <div class="presets" id="presets"></div>
+  </div>
+</header>
+
+<div class="workspace">
+  <main class="left">
+    <div class="filters" id="filters">
+      <div class="fgroup"><span class="flabel">Section</span><span id="secChips"></span></div>
+      <div class="fgroup"><span class="flabel">Tag</span><span id="tagChips"></span></div>
+      <label class="toggle"><input type="checkbox" id="bestOnly"> Recommended only ★</label>
+    </div>
+    <div id="list"></div>
+  </main>
+
+  <aside class="tray" id="tray">
+    <div class="top">
+      <div class="ttl"><h2>Build</h2><span class="cnt" id="trayCnt">0 selected</span></div>
+      <div class="meter" id="meter">
+        <div class="track"><div class="fill" id="meterFill"></div></div>
+        <div class="lbl"><span id="meterLbl">empty</span><span id="meterPct">0%</span></div>
+      </div>
+    </div>
+    <div class="traylist" id="traylist"></div>
+    <div class="actions">
+      <button class="btn ghost" id="copyMd">Copy Markdown</button>
+      <button class="btn ghost" id="copyTxt">Copy text</button>
+      <button class="btn" id="dlMd">Download .md</button>
+      <button class="btn ghost" id="clearBtn">Clear</button>
+    </div>
+  </aside>
+</div>
+
+<button class="trayfab" id="trayFab">Build · <span id="fabCnt">0</span></button>
+
+<dialog id="cfg">
+  <div class="dlg">
+    <h3>Connect a Google Sheet</h3>
+    <p>The bank pulls live from a Google Sheet. Paste either a <b>Publish-to-web CSV link</b> or a normal share link — the page will figure out the rest.</p>
+    <input type="url" id="cfgUrl" placeholder="https://docs.google.com/spreadsheets/…">
+    <div class="status" id="cfgStatus"></div>
+    <ol>
+      <li>In your sheet: <code>File → Share → Publish to web</code>, pick the tab, choose <b>Comma-separated values (.csv)</b>, Publish.</li>
+      <li>Paste that link above. A plain <code>/edit</code> link also works if the sheet is shared "anyone with the link can view".</li>
+      <li>Columns: <code>Section, Entry, Bullet, Tags, Number, Source, Best, Notes</code>.</li>
+    </ol>
+    <div class="row">
+      <button class="btn ghost" id="cfgDisconnect">Disconnect</button>
+      <button class="btn ghost" id="cfgCancel">Cancel</button>
+      <button class="btn" id="cfgSave">Connect</button>
+    </div>
+  </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const SECTION_ORDER = ["EDUCATION","EXPERIENCE","PROJECTS","LEADERSHIP"];
+const PRESETS = [
+  {name:"All",        tags:[]},
+  {name:"FPGA / RTL", tags:["RTL","ARCH","HLS"]},
+  {name:"ASIC / Arch",tags:["ARCH","HLS"]},
+  {name:"Embedded",   tags:["EMB","RTL"]},
+  {name:"Software/ML",tags:["SW","ML"]},
+  {name:"Leadership", tags:["LEAD"]},
+];
+
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+};
+
+let RAW = [];                 // bank is defined ONLY by the connected sheet
+let connected = false;        // have we ever successfully loaded?
+const state = {
+  sections:new Set(), tags:new Set(), bestOnly:false, q:"",
+  selected:new Set(JSON.parse(store.get("rb_sel")||"[]")),
+};
+
+/* ---------- Google Sheets ---------- */
+function csvUrlFrom(input){
+  input = (input||"").trim();
+  if(!input) return "";
+  if(input.includes("output=csv") || input.includes("tqx=out:csv")) return input;
+  const m = input.match(/\/spreadsheets\/d\/(?:e\/)?([a-zA-Z0-9-_]+)/);
+  if(m){
+    const gid = (input.match(/[#&?]gid=(\d+)/)||[])[1] || "0";
+    return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  }
+  return input;
+}
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);   // strip BOM
+  const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; }
+      else f+=c;
+    }else{
+      if(c==='"') q=true;
+      else if(c===','){ row.push(f); f=""; }
+      else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=""; }
+      else if(c==='\r'){ if(text[i+1]!=='\n'){ row.push(f); rows.push(row); row=[]; f=""; } }
+      else f+=c;
+    }
+  }
+  if(f.length || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r=>r.some(c=>c.trim()!==""));
+}
+function rowsToItems(rows){
+  if(!rows.length) throw new Error("the sheet is empty");
+  const head = rows[0].map(h=>h.trim().toLowerCase());
+  const idx = name => head.findIndex(h=>h===name||h.startsWith(name));
+  const ci = {section:idx("section"),entry:idx("entry"),bullet:idx("bullet"),
+    tags:idx("tag"),number:idx("number")>=0?idx("number"):idx("metric"),
+    source:idx("source"),best:idx("best"),notes:idx("note")};
+  if(ci.bullet<0) throw new Error('no "Bullet" column found in the header row');
+  const cell=(r,i)=> i>=0 ? (r[i]||"").trim() : "";
+  const truthy = v => /^(true|yes|x|1|★|y)$/i.test(v.trim());
+  return rows.slice(1).map((r,i)=>({
+    id:"i"+i,
+    section:cell(r,ci.section).toUpperCase(),
+    entry:cell(r,ci.entry),
+    bullet:cell(r,ci.bullet),
+    tags:cell(r,ci.tags).split(/[,/|]+/).map(t=>t.trim().toUpperCase()).filter(Boolean),
+    number:cell(r,ci.number),
+    source:cell(r,ci.source),
+    best:truthy(cell(r,ci.best)),
+    notes:cell(r,ci.notes),
+  })).filter(it=>it.bullet);
+}
+async function loadSheet(url,quiet){
+  const csv = csvUrlFrom(url);
+  if(!csv){ connected=false; setSource("idle"); render(); return; }
+  try{
+    setSource("idle","syncing…");
+    const res = await fetch(csv,{redirect:"follow"});
+    if(!res.ok) throw new Error("HTTP "+res.status+" — check sharing/publish settings");
+    const items = rowsToItems(parseCSV(await res.text()));
+    if(!items.length) throw new Error("no bullets found — check the Bullet column");
+    RAW = items; connected = true; setSource("live");
+    buildFilters(); syncPresetUI(); render();
+    if(!quiet) toast("Synced "+items.length+" items from Google Sheets");
+    return "";
+  }catch(e){
+    setSource("err","sync failed");
+    render();
+    if(!quiet) toast("Couldn't load the sheet — "+e.message);
+    return e.message;
+  }
+}
+function setSource(kind,label){
+  const dot=document.getElementById("srcDot"), lab=document.getElementById("srcLabel");
+  dot.className = "dot" + (kind==="live"?" live":kind==="err"?" err":"");
+  lab.textContent = label || (kind==="live"?"Live · Google Sheets":kind==="err"?"Sync failed":"Not connected");
+}
+
+/* ---------- filters + render ---------- */
+function universeTags(){ const s=new Set(); RAW.forEach(i=>i.tags.forEach(t=>s.add(t)));
+  const known=["RTL","HLS","ARCH","ML","EMB","SW","LEAD","EDU","TITLE"];
+  return known.filter(t=>s.has(t)).concat([...s].filter(t=>!known.includes(t))); }
+function universeSections(){ const s=new Set(RAW.map(i=>i.section));
+  return SECTION_ORDER.filter(x=>s.has(x)).concat([...s].filter(x=>!SECTION_ORDER.includes(x))); }
+
+function buildFilters(){
+  const sc=document.getElementById("secChips"); sc.innerHTML="";
+  universeSections().forEach(s=>{
+    const n=RAW.filter(i=>i.section===s).length;
+    sc.appendChild(chip(s,s,state.sections,()=>render(),n));
+  });
+  const tc=document.getElementById("tagChips"); tc.innerHTML="";
+  universeTags().forEach(t=>{
+    const n=RAW.filter(i=>i.tags.includes(t)).length;
+    const el=chip(t,t,state.tags,()=>{syncPresetUI();render();},n);
+    el.dataset.tag=t; tc.appendChild(el);
+  });
+}
+function chip(label,val,set,cb,count){
+  const b=document.createElement("button"); b.className="chip"+(set.has(val)?" on":"");
+  b.innerHTML=label+(count!=null?` <span class="ct">${count}</span>`:"");
+  b.onclick=()=>{ set.has(val)?set.delete(val):set.add(val); b.classList.toggle("on"); cb(); };
+  return b;
+}
+function passes(it){
+  if(state.sections.size && !state.sections.has(it.section)) return false;
+  if(state.tags.size && !it.tags.some(t=>state.tags.has(t))) return false;
+  if(state.bestOnly && !it.best) return false;
+  if(state.q){ const q=state.q.toLowerCase();
+    if(!(it.bullet+" "+it.entry+" "+it.notes).toLowerCase().includes(q)) return false; }
+  return true;
+}
+function render(){
+  const list=document.getElementById("list");
+  const filters=document.getElementById("filters");
+  // no sheet loaded → onboarding / error state
+  if(!RAW.length){
+    filters.classList.add("hide");
+    const failed = !connected && document.getElementById("srcDot").classList.contains("err");
+    list.innerHTML = `<div class="onboard${failed?" err":""}">
+      <div class="dia">◇</div>
+      <h2>${failed?"Couldn't reach that sheet":"Connect your Google Sheet"}</h2>
+      <p>${failed?"Check that it's published to the web (or link-shared) and try again.":"Every bullet on this page comes straight from your sheet. Point it at one to begin."}</p>
+      <button class="btn" id="onboardBtn">${failed?"Try again":"Connect a sheet"}</button>
+      <div class="cols">expected columns · Section · Entry · Bullet · Tags · Number · Source · Best · Notes</div>
+    </div>`;
+    document.getElementById("onboardBtn").onclick=()=>document.getElementById("cfgBtn").click();
+    renderTray(); persist(); return;
+  }
+  filters.classList.remove("hide");
+  list.innerHTML="";
+  const shown=RAW.filter(passes);
+  if(!shown.length){ list.innerHTML='<div class="empty"><b>Nothing matches those filters</b>Loosen a tag or clear the search to see more.</div>'; }
+  const bySec={}; shown.forEach(it=>{ (bySec[it.section]=bySec[it.section]||[]).push(it); });
+  universeSections().filter(s=>bySec[s]).forEach(sec=>{
+    const g=document.createElement("div"); g.className="grp";
+    g.innerHTML=`<h3>${esc(sec)}</h3>`;
+    const byEnt={}; bySec[sec].forEach(it=>{ (byEnt[it.entry]=byEnt[it.entry]||[]).push(it); });
+    Object.keys(byEnt).forEach(ent=>{
+      const src=[...new Set(byEnt[ent].map(i=>i.source).filter(Boolean))].join(" · ");
+      const h=document.createElement("h4"); h.innerHTML=`${esc(ent)} <span class="ent-src">${esc(src)}</span>`;
+      g.appendChild(h);
+      byEnt[ent].forEach(it=>g.appendChild(itemEl(it)));
+    });
+    list.appendChild(g);
+  });
+  renderTray(); persist();
+}
+function itemEl(it){
+  const sel=state.selected.has(it.id);
+  const d=document.createElement("label"); d.className="item"+(sel?" sel":"");
+  const tags=it.tags.map(t=>`<span class="tag" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
+  d.innerHTML=`
+    <span class="box"><input type="checkbox" ${sel?"checked":""}></span>
+    <span class="body">
+      <span class="txt">${it.best?'<span class="star">★</span> ':''}${esc(it.bullet)}</span>
+      <span class="meta">${tags}${it.number?`<span class="num">${esc(it.number)}</span>`:""}<span class="srcbadge">${esc(it.source)}</span></span>
+      ${it.notes?`<span class="note">${esc(it.notes)}</span>`:""}
+    </span>`;
+  d.querySelector("input").onchange=e=>{
+    e.target.checked?state.selected.add(it.id):state.selected.delete(it.id);
+    d.classList.toggle("sel",e.target.checked); renderTray(); persist();
+  };
+  return d;
+}
+
+/* ---------- tray + assembly ---------- */
+function selectedItems(){
+  const order={}; SECTION_ORDER.forEach((s,i)=>order[s]=i);
+  return RAW.filter(i=>state.selected.has(i.id))
+    .sort((a,b)=>(order[a.section]??9)-(order[b.section]??9));
+}
+function renderTray(){
+  const items=selectedItems();
+  document.getElementById("trayCnt").textContent=items.length+" selected";
+  document.getElementById("fabCnt").textContent=items.length;
+  const tl=document.getElementById("traylist");
+  if(!items.length){ tl.innerHTML='<div class="trayempty"><div class="big">◇</div>Tick bullets on the left to assemble a resume here.</div>'; updateMeter(0,0); return; }
+  tl.innerHTML="";
+  const grouped=groupForResume(items);
+  grouped.forEach(([sec,ents])=>ents.forEach(([ent,bul])=>{
+    const g=document.createElement("div"); g.className="tgrp";
+    g.innerHTML=`<div class="tsec">${esc(sec)}</div><div class="tent">${esc(ent)}</div>`;
+    bul.forEach(it=>{
+      const r=document.createElement("div"); r.className="titem";
+      r.innerHTML=`<button class="rm" title="Remove">✕</button><span>${esc(it.bullet)}</span>`;
+      r.querySelector(".rm").onclick=()=>{ state.selected.delete(it.id); render(); };
+      g.appendChild(r);
+    });
+    tl.appendChild(g);
+  }));
+  let lines=0; grouped.forEach(([s,ents])=>ents.forEach(([e,bul])=>{
+    lines+=1; bul.forEach(it=>lines+=Math.max(1,Math.ceil(it.bullet.length/95))); }));
+  updateMeter(lines,items.length);
+}
+function groupForResume(items){
+  const order={}; SECTION_ORDER.forEach((s,i)=>order[s]=i);
+  const secs=[...new Set(items.map(i=>i.section))].sort((a,b)=>(order[a]??9)-(order[b]??9));
+  return secs.map(sec=>{
+    const its=items.filter(i=>i.section===sec);
+    const ents=[...new Set(its.map(i=>i.entry))];
+    return [sec, ents.map(ent=>[ent, its.filter(i=>i.entry===ent)])];
+  });
+}
+function updateMeter(lines,n){
+  const cap=45, pct=Math.min(100,Math.round(lines/cap*100));
+  const m=document.getElementById("meter");
+  document.getElementById("meterFill").style.width=(n?Math.max(4,pct):0)+"%";
+  document.getElementById("meterPct").textContent=n?pct+"%":"0%";
+  document.getElementById("meterLbl").textContent=n?`≈ ${lines} lines · rough one-page fit`:"empty";
+  m.classList.toggle("over",lines>cap);
+}
+function assemble(md){
+  const out=[];
+  groupForResume(selectedItems()).forEach(([sec,ents])=>{
+    out.push(md?`### ${sec}`:sec.toUpperCase());
+    ents.forEach(([ent,bul])=>{
+      out.push(md?`**${ent}**`:ent);
+      bul.forEach(it=>out.push((md?"- ":"• ")+it.bullet));
+    });
+    out.push("");
+  });
+  return out.join("\n").trim();
+}
+
+/* ---------- misc ---------- */
+function persist(){ store.set("rb_sel",JSON.stringify([...state.selected])); }
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
+function copy(text){ navigator.clipboard.writeText(text).then(()=>toast("Copied to clipboard"),()=>toast("Copy failed")); }
+function syncPresetUI(){
+  document.querySelectorAll(".preset").forEach((b,i)=>{
+    const p=PRESETS[i];
+    const on = p.tags.length>0 && p.tags.length===state.tags.size && p.tags.every(t=>state.tags.has(t));
+    b.classList.toggle("on", on || (p.name==="All"&&state.tags.size===0));
+  });
+}
+
+/* ---------- wire up ---------- */
+const presetWrap=document.getElementById("presets");
+PRESETS.forEach(p=>{
+  const b=document.createElement("button"); b.className="preset"; b.textContent=p.name;
+  b.onclick=()=>{ state.tags=new Set(p.tags); buildFilters(); syncPresetUI(); render(); };
+  presetWrap.appendChild(b);
+});
+document.getElementById("q").oninput=e=>{ state.q=e.target.value; render(); };
+document.getElementById("bestOnly").onchange=e=>{ state.bestOnly=e.target.checked; render(); };
+document.getElementById("copyMd").onclick=()=>state.selected.size?copy(assemble(true)):toast("Nothing selected yet");
+document.getElementById("copyTxt").onclick=()=>state.selected.size?copy(assemble(false)):toast("Nothing selected yet");
+document.getElementById("clearBtn").onclick=()=>{ state.selected.clear(); render(); };
+document.getElementById("dlMd").onclick=()=>{
+  if(!state.selected.size) return toast("Nothing selected yet");
+  const blob=new Blob([assemble(true)],{type:"text/markdown"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="resume-draft.md"; a.click(); URL.revokeObjectURL(a.href);
+};
+document.getElementById("trayFab").onclick=()=>document.getElementById("tray").classList.toggle("open");
+
+const cfg=document.getElementById("cfg");
+document.getElementById("cfgBtn").onclick=()=>{ document.getElementById("cfgUrl").value=store.get("rb_url")||""; document.getElementById("cfgStatus").textContent=""; cfg.showModal(); };
+document.getElementById("cfgCancel").onclick=()=>cfg.close();
+document.getElementById("cfgDisconnect").onclick=()=>{ store.set("rb_url",""); RAW=[]; connected=false; setSource("idle"); buildFilters(); render(); cfg.close(); toast("Disconnected"); };
+document.getElementById("cfgSave").onclick=async()=>{
+  const url=document.getElementById("cfgUrl").value.trim();
+  const st=document.getElementById("cfgStatus");
+  st.className="status"; st.textContent="Connecting…";
+  const err=await loadSheet(url,true);
+  if(err){ st.className="status err"; st.textContent="Couldn't load: "+err; }
+  else{ store.set("rb_url",url); st.className="status ok"; st.textContent="Connected."; setTimeout(()=>cfg.close(),500); toast("Connected to Google Sheets"); }
+};
+document.getElementById("refreshBtn").onclick=()=>{ const u=store.get("rb_url"); u?loadSheet(u):document.getElementById("cfgBtn").click(); };
+
+/* init: ?sheet= URL param wins, then the remembered link, else onboarding */
+buildFilters(); syncPresetUI();
+const param=new URLSearchParams(location.search).get("sheet");
+if(param){ store.set("rb_url",param); loadSheet(param,true); }
+else{ const saved=store.get("rb_url"); if(saved) loadSheet(saved,true); else { setSource("idle"); render(); } }
+</script>
+</body>
+</html>
