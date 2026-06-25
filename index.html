@@ -9,31 +9,36 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#eef1f4; --panel:#ffffff; --ink:#16202e; --soft:#5c6775; --faint:#8a93a0;
+  --bg:#eef1f4; --panel:#fff; --ink:#16202e; --soft:#5c6775; --faint:#8a93a0;
   --line:#dce1e7; --line2:#eceff3; --navy:#1f3a5f; --navy2:#2d5483;
-  --copper:#b26a3c; --copper-deep:#92531f; --copper-soft:#f3e6da;
-  --ok:#3f7a45; --warn:#b2412f;
+  --copper:#b26a3c; --copper-deep:#92531f; --ok:#3f7a45; --warn:#b2412f;
   --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  --serif:Georgia,"Times New Roman",serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
 body{font-family:var(--font-ui);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer}
-a{color:var(--navy2)}
 
 header{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;border-bottom:3px solid var(--copper)}
-.bar{display:flex;align-items:center;gap:16px;padding:12px 20px;flex-wrap:wrap}
+.bar{display:flex;align-items:center;gap:14px;padding:11px 20px;flex-wrap:wrap}
 .brand{display:flex;align-items:baseline;gap:10px}
 .mark{font-family:var(--font-mono);font-weight:600;letter-spacing:.04em}
 .mark .dia{color:var(--copper);margin-right:6px}
 .brand small{color:#aebfd4;font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-.src{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;position:relative}
 .dot{width:8px;height:8px;border-radius:50%;background:#8a93a0}
 .dot.live{background:#7fd18a;box-shadow:0 0 0 3px rgba(127,209,138,.25)}
 .dot.err{background:#e08a7c;box-shadow:0 0 0 3px rgba(178,65,47,.25)}
-.src button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 9px;font-size:11px;font-family:var(--font-mono)}
-.src button:hover{background:rgba(255,255,255,.22)}
+.tools button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:5px 10px;font-size:11px;font-family:var(--font-mono)}
+.tools button:hover{background:rgba(255,255,255,.22)}
+.menu{position:absolute;top:34px;right:0;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 30px rgba(20,32,46,.18);min-width:230px;padding:6px;display:none;z-index:50}
+.menu.open{display:block}
+.menu button{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;color:var(--ink);border:0;border-radius:6px;padding:9px 10px;font-family:var(--font-ui);font-size:13px;text-align:left}
+.menu button:hover{background:var(--line2)}
+.menu button .k{font-family:var(--font-mono);font-size:10px;color:var(--faint)}
+.menu .sep{height:1px;background:var(--line);margin:5px 4px}
 
 .controls{display:flex;align-items:center;gap:10px;padding:10px 20px;background:#26456c;flex-wrap:wrap}
 .controls .search{flex:1;min-width:180px;display:flex;align-items:center;background:#fff;border-radius:7px;padding:0 10px}
@@ -44,92 +49,59 @@ header{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;border
 .preset:hover{background:rgba(255,255,255,.2)}
 .preset.on{background:var(--copper);border-color:var(--copper);color:#fff}
 
-.workspace{display:grid;grid-template-columns:1fr 390px;gap:0;align-items:start}
-.left{padding:18px 20px 60px;min-width:0}
-.filters{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:0 2px 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
-.filters.hide{display:none}
-.fgroup{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.flabel{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:2px}
-.chip{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 9px;font-size:12px;color:var(--soft);font-family:var(--font-mono)}
-.chip:hover{border-color:var(--navy2);color:var(--ink)}
-.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
-.chip .ct{opacity:.6;margin-left:5px}
-.toggle{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--soft)}
-.toggle input{accent-color:var(--copper);width:15px;height:15px}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+.left{padding:16px 18px 60px;min-width:0}
+.colh{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--copper-deep);margin:0 0 10px}
+.profban{display:flex;gap:10px;align-items:center;background:#e7ecf2;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:9px}
+.profban .pi{font-size:18px;color:var(--navy)}
+.profban .t{font-size:12.5px;color:var(--ink)}
+.profban .s{font-size:11px;color:var(--soft)}
+.cw{border:1px dashed #c9b79f;border-radius:9px;padding:9px 11px;margin-bottom:9px;background:#fdf7ef}
+.cw .top{display:flex;gap:9px;align-items:center}
+.cw input[type=checkbox]{accent-color:var(--copper);width:15px;height:15px}
+.cw .lab{flex:1;font-size:12.5px;color:var(--ink)}
+.cw .lab b{font-family:var(--font-mono);font-size:10px;color:var(--copper-deep);font-weight:500}
+.cw .mo{border:0;background:none;color:var(--copper-deep);font-family:var(--font-mono);font-size:11px;padding:0}
+.cw .courses{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}
+.cc{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 9px;font-size:11.5px;color:var(--soft)}
+.cc.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 
-.tag{font-family:var(--font-mono);font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:4px;letter-spacing:.03em}
-[data-tag=RTL]{background:#deebf7;color:#235a8a}
-[data-tag=HLS]{background:#d6f0ee;color:#16746d}
-[data-tag=ARCH]{background:#e8e0f4;color:#5e4593}
-[data-tag=ML]{background:#fbe6d4;color:#a85b18}
-[data-tag=EMB]{background:#e0efe1;color:#357a3c}
-[data-tag=SW]{background:#e9ecef;color:#54606e}
-[data-tag=LEAD]{background:#fbf1d2;color:#8a6c12}
-[data-tag=EDU]{background:#e6eef6;color:#2c5c8a}
-[data-tag=TITLE]{background:#e4e4e4;color:#444}
+.grp{margin-bottom:18px}
+.grp h3{margin:0 0 8px;font-size:11px;font-family:var(--font-mono);letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.entry{display:flex;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);margin-bottom:7px}
+.entry:hover{border-color:#c2ccd8}
+.entry.sel{border-color:var(--copper);box-shadow:0 0 0 1px var(--copper) inset;background:#fffaf5}
+.entry .box{flex:none;margin-top:2px}
+.entry .box input{width:17px;height:17px;accent-color:var(--copper);cursor:pointer}
+.entry .body{min-width:0;flex:1}
+.entry .hd{display:flex;justify-content:space-between;gap:8px}
+.entry .ti{font-size:13px;font-weight:600;color:var(--ink)}
+.entry .dt{font-family:var(--font-mono);font-size:10px;color:var(--faint);white-space:nowrap}
+.entry .bl{font-size:11.5px;color:var(--soft);margin-top:4px}
+.entry .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
+.tg{font-family:var(--font-mono);font-size:10px;padding:1px 6px;border-radius:4px;background:#e6eef6;color:#2c5c8a}
+.mod{font-family:var(--font-mono);font-size:9.5px;color:var(--faint)}
 
-.grp{margin-bottom:22px}
-.grp h3{margin:0 0 2px;font-size:11px;font-family:var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--copper-deep)}
-.grp h4{margin:8px 0 8px;font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:baseline;gap:8px}
-.grp h4 .ent-src{font-family:var(--font-mono);font-size:10px;color:var(--faint);font-weight:400}
-.item{display:flex;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);margin-bottom:7px;transition:border-color .12s,box-shadow .12s}
-.item:hover{border-color:#c2ccd8;box-shadow:0 1px 3px rgba(20,32,46,.06)}
-.item.sel{border-color:var(--copper);box-shadow:0 0 0 1px var(--copper) inset;background:#fffaf5}
-.item .box{flex:none;margin-top:2px}
-.item .box input{width:17px;height:17px;accent-color:var(--copper);cursor:pointer}
-.item .body{min-width:0;flex:1}
-.item .txt{font-size:13.5px;color:var(--ink)}
-.item .meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px}
-.star{color:var(--copper);font-size:13px;line-height:1}
-.num{font-family:var(--font-mono);font-size:11px;color:var(--soft);background:var(--line2);padding:1px 6px;border-radius:4px}
-.srcbadge{font-family:var(--font-mono);font-size:10px;color:var(--faint)}
-.note{font-size:11.5px;color:var(--warn);font-style:italic;margin-top:5px;display:flex;gap:5px}
-.note::before{content:"!";font-family:var(--font-mono);font-style:normal;font-weight:600;color:var(--warn)}
+.right{position:sticky;top:118px;padding:16px 18px 40px}
+.paperwrap{background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 4px rgba(20,32,46,.06);padding:26px 30px;max-height:calc(100vh - 220px);overflow:auto}
+.foot{display:flex;align-items:center;gap:12px;margin-top:12px}
+.meter{flex:1}
+.meter .tk{height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+.meter .fl{height:100%;background:linear-gradient(90deg,var(--navy2),var(--copper));width:0;transition:width .2s}
+.meter.over .fl{background:var(--warn)}
+.meter .lb{font-family:var(--font-mono);font-size:10.5px;color:var(--soft);margin-top:5px}
+.meter.over .lb{color:var(--warn)}
 
-.empty{padding:46px 20px;text-align:center;color:var(--faint)}
-.empty b{display:block;color:var(--soft);font-size:15px;margin-bottom:6px}
-.onboard{max-width:440px;margin:48px auto;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:34px 30px}
+.onboard{grid-column:1/-1;max-width:460px;margin:54px auto;text-align:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:34px 30px}
+.onboard.err{border-color:#eccfc9;background:#fdf6f4}
 .onboard .dia{font-family:var(--font-mono);font-size:34px;color:var(--copper)}
 .onboard h2{margin:10px 0 6px;font-size:18px}
 .onboard p{color:var(--soft);font-size:13px;margin:0 0 18px}
-.onboard.err{border-color:#eccfc9;background:#fdf6f4}
 .onboard .cols{font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-top:16px}
-
-.tray{position:sticky;top:118px;height:calc(100vh - 118px);border-left:1px solid var(--line);background:#fbfcfd;display:flex;flex-direction:column}
-.tray .top{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
-.tray .ttl{display:flex;align-items:center;justify-content:space-between}
-.tray .ttl h2{margin:0;font-size:13px;font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
-.tray .ttl .cnt{font-family:var(--font-mono);font-size:12px;color:var(--copper-deep);font-weight:600}
-.meter{margin-top:10px}
-.meter .track{height:7px;border-radius:4px;background:var(--line);overflow:hidden}
-.meter .fill{height:100%;background:linear-gradient(90deg,var(--navy2),var(--copper));width:0;transition:width .25s}
-.meter .lbl{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10.5px;color:var(--soft);margin-top:5px}
-.meter.over .fill{background:var(--warn)}
-.meter.over .lbl{color:var(--warn)}
-.traylist{flex:1;overflow:auto;padding:10px 14px}
-.tgrp{margin-bottom:13px}
-.tgrp .tsec{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;color:var(--copper-deep);text-transform:uppercase}
-.tgrp .tent{font-size:12px;font-weight:600;margin:2px 0 5px;color:var(--ink)}
-.titem{display:flex;gap:8px;font-size:12px;color:var(--soft);padding:3px 0;border-bottom:1px dashed var(--line2)}
-.titem .rm{flex:none;border:0;background:transparent;color:var(--faint);font-family:var(--font-mono);padding:0 2px;line-height:1}
-.titem .rm:hover{color:var(--warn)}
-.titem span{min-width:0}
-.tray .actions{padding:12px 14px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.btn{border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:7px;padding:9px 10px;font-size:12.5px;font-weight:500}
+.btn{border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:7px;padding:9px 14px;font-size:13px;font-weight:500}
 .btn:hover{background:var(--navy2)}
 .btn.ghost{background:transparent;color:var(--navy)}
 .btn.ghost:hover{background:#eaf0f7}
-.trayempty{padding:36px 18px;text-align:center;color:var(--faint);font-size:13px}
-.trayempty .big{font-family:var(--font-mono);color:var(--copper);font-size:26px;margin-bottom:8px}
-
-.trayfab{display:none}
-@media(max-width:880px){
-  .workspace{grid-template-columns:1fr}
-  .tray{position:fixed;inset:0;top:auto;height:80vh;border-left:0;border-top:2px solid var(--copper);border-radius:14px 14px 0 0;transform:translateY(102%);transition:transform .25s;z-index:40;box-shadow:0 -8px 30px rgba(20,32,46,.18)}
-  .tray.open{transform:translateY(0)}
-  .trayfab{display:flex;position:fixed;right:16px;bottom:16px;z-index:41;background:var(--copper);color:#fff;border:0;border-radius:999px;padding:13px 18px;font-weight:600;font-size:14px;box-shadow:0 6px 18px rgba(146,83,31,.4);align-items:center;gap:8px}
-}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
 dialog{border:0;border-radius:12px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 60px rgba(20,32,46,.3)}
 dialog::backdrop{background:rgba(20,32,46,.45)}
@@ -141,72 +113,73 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
 .dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .dlg code{font-family:var(--font-mono);font-size:11px;background:var(--line2);padding:1px 5px;border-radius:4px}
 .status{font-size:12px;margin-top:8px;font-family:var(--font-mono)}
-.status.err{color:var(--warn)}
-.status.ok{color:var(--ok)}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.status.err{color:var(--warn)} .status.ok{color:var(--ok)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;z-index:80;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media print{
+  @page{size:Letter;margin:.6in}
+  body{background:#fff}
+  body *{visibility:hidden!important}
+  #paper,#paper *{visibility:visible!important}
+  #paper{position:absolute;left:0;top:0;width:100%;max-height:none;overflow:visible;border:0;box-shadow:none;padding:0;border-radius:0}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <header>
   <div class="bar">
-    <div class="brand">
-      <span class="mark"><span class="dia">◇</span>RESUME BANK</span>
-      <small>line-item assembler</small>
-    </div>
-    <div class="src">
-      <span class="dot" id="srcDot"></span>
-      <span id="srcLabel">…</span>
+    <div class="brand"><span class="mark"><span class="dia">◇</span>RESUME BANK</span><small>line-item assembler</small></div>
+    <div class="tools">
+      <span class="dot" id="srcDot"></span><span id="srcLabel">…</span>
       <button id="refreshBtn" title="Re-pull from the sheet">Refresh</button>
-      <button id="cfgBtn" title="Connect a Google Sheet">Source</button>
+      <button id="cfgBtn">Source</button>
+      <button id="exportBtn">Export ▾</button>
+      <div class="menu" id="exportMenu">
+        <button data-act="pdf">Save as PDF<span class="k">print</span></button>
+        <button data-act="docx">Download .docx<span class="k">word</span></button>
+        <div class="sep"></div>
+        <button data-act="rich">Copy rich text<span class="k">docs/word</span></button>
+        <button data-act="md">Copy as Markdown<span class="k">.md</span></button>
+        <button data-act="txt">Copy as text<span class="k">plain</span></button>
+        <div class="sep"></div>
+        <button data-act="link">Copy share link<span class="k">?sheet</span></button>
+      </div>
     </div>
   </div>
   <div class="controls">
-    <label class="search"><span>⌕</span><input id="q" type="search" placeholder="Search bullets, entries, notes…" autocomplete="off"></label>
+    <label class="search"><span>⌕</span><input id="q" type="search" placeholder="Search entries…" autocomplete="off"></label>
     <div class="presets" id="presets"></div>
   </div>
 </header>
 
-<div class="workspace">
-  <main class="left">
-    <div class="filters" id="filters">
-      <div class="fgroup"><span class="flabel">Section</span><span id="secChips"></span></div>
-      <div class="fgroup"><span class="flabel">Tag</span><span id="tagChips"></span></div>
-      <label class="toggle"><input type="checkbox" id="bestOnly"> Recommended only ★</label>
-    </div>
+<div class="workspace" id="workspace">
+  <main class="left" id="left">
+    <p class="colh">Entries · pick</p>
+    <div class="profban" id="profban"></div>
+    <div class="cw" id="cw"></div>
     <div id="list"></div>
   </main>
-
-  <aside class="tray" id="tray">
-    <div class="top">
-      <div class="ttl"><h2>Build</h2><span class="cnt" id="trayCnt">0 selected</span></div>
-      <div class="meter" id="meter">
-        <div class="track"><div class="fill" id="meterFill"></div></div>
-        <div class="lbl"><span id="meterLbl">empty</span><span id="meterPct">0%</span></div>
-      </div>
-    </div>
-    <div class="traylist" id="traylist"></div>
-    <div class="actions">
-      <button class="btn ghost" id="copyMd">Copy Markdown</button>
-      <button class="btn ghost" id="copyTxt">Copy text</button>
-      <button class="btn" id="dlMd">Download .md</button>
-      <button class="btn ghost" id="clearBtn">Clear</button>
+  <aside class="right" id="right">
+    <p class="colh">Live preview</p>
+    <div class="paperwrap"><div id="paper"></div></div>
+    <div class="foot">
+      <div class="meter" id="meter"><div class="tk"><div class="fl" id="fl"></div></div><div class="lb" id="lb">empty</div></div>
     </div>
   </aside>
 </div>
 
-<button class="trayfab" id="trayFab">Build · <span id="fabCnt">0</span></button>
-
 <dialog id="cfg">
   <div class="dlg">
     <h3>Connect a Google Sheet</h3>
-    <p>The bank pulls live from a Google Sheet. Paste either a <b>Publish-to-web CSV link</b> or a normal share link — the page will figure out the rest.</p>
+    <p>Every line comes from your sheet. Paste a <b>Publish-to-web CSV link</b> or a normal share link.</p>
     <input type="url" id="cfgUrl" placeholder="https://docs.google.com/spreadsheets/…">
     <div class="status" id="cfgStatus"></div>
     <ol>
-      <li>In your sheet: <code>File → Share → Publish to web</code>, pick the tab, choose <b>Comma-separated values (.csv)</b>, Publish.</li>
-      <li>Paste that link above. A plain <code>/edit</code> link also works if the sheet is shared "anyone with the link can view".</li>
-      <li>Columns: <code>Section, Entry, Bullet, Tags, Number, Source, Best, Notes</code>.</li>
+      <li><code>File → Share → Publish to web</code>, pick the tab, format <b>Comma-separated values (.csv)</b>, Publish.</li>
+      <li>Paste that link above. A plain <code>/edit</code> link works too if the sheet is link-shared.</li>
+      <li>Columns: <code>Type, Title, Tags, Presets, Date, Bullet 1…, Notes</code>.</li>
     </ol>
     <div class="row">
       <button class="btn ghost" id="cfgDisconnect">Disconnect</button>
@@ -218,306 +191,252 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
 <div class="toast" id="toast"></div>
 
 <script>
-const SECTION_ORDER = ["EDUCATION","EXPERIENCE","PROJECTS","LEADERSHIP"];
-const PRESETS = [
-  {name:"All",        tags:[]},
-  {name:"FPGA / RTL", tags:["RTL","ARCH","HLS"]},
-  {name:"ASIC / Arch",tags:["ARCH","HLS"]},
-  {name:"Embedded",   tags:["EMB","RTL"]},
-  {name:"Software/ML",tags:["SW","ML"]},
-  {name:"Leadership", tags:["LEAD"]},
-];
+const PRESET_ORDER = ["FPGA / ASIC","Embedded","DSP","ML / Accel","Research","Software"];
+const SECTIONS = [["Experience","Experience"],["Project","Projects"],["Leadership","Leadership"]];
+const DOCX_CDN = "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js";
 
-const store = {
-  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
-  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
-};
+const store = { get(k){ try{return localStorage.getItem(k);}catch(e){return null;} }, set(k,v){ try{localStorage.setItem(k,v);}catch(e){} } };
 
-let RAW = [];                 // bank is defined ONLY by the connected sheet
-let connected = false;        // have we ever successfully loaded?
-const state = {
-  sections:new Set(), tags:new Set(), bestOnly:false, q:"",
-  selected:new Set(JSON.parse(store.get("rb_sel")||"[]")),
-};
+let RAW=[], connected=false;
+let profile={name:"",contact:"",edu:null,skills:[]}, cwByPreset={}, entries=[], presetList=[];
+const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"" };
 
-/* ---------- Google Sheets ---------- */
 function csvUrlFrom(input){
-  input = (input||"").trim();
-  if(!input) return "";
-  if(input.includes("output=csv") || input.includes("tqx=out:csv")) return input;
-  const m = input.match(/\/spreadsheets\/d\/(?:e\/)?([a-zA-Z0-9-_]+)/);
-  if(m){
-    const gid = (input.match(/[#&?]gid=(\d+)/)||[])[1] || "0";
-    return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv&gid=${gid}`;
-  }
+  input=(input||"").trim(); if(!input) return "";
+  if(input.includes("output=csv")||input.includes("tqx=out:csv")) return input;
+  const m=input.match(/\/spreadsheets\/d\/(?:e\/)?([a-zA-Z0-9-_]+)/);
+  if(m){ const gid=(input.match(/[#&?]gid=(\d+)/)||[])[1]||"0"; return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv&gid=${gid}`; }
   return input;
 }
 function parseCSV(text){
-  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);   // strip BOM
-  const rows=[]; let row=[], f="", q=false;
-  for(let i=0;i<text.length;i++){
-    const c=text[i];
-    if(q){
-      if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; }
-      else f+=c;
-    }else{
-      if(c==='"') q=true;
-      else if(c===','){ row.push(f); f=""; }
-      else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=""; }
-      else if(c==='\r'){ if(text[i+1]!=='\n'){ row.push(f); rows.push(row); row=[]; f=""; } }
-      else f+=c;
-    }
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const rows=[]; let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else{ if(c==='"')q=true; else if(c===','){row.push(f);f="";} else if(c==='\n'){row.push(f);rows.push(row);row=[];f="";} else if(c==='\r'){ if(text[i+1]!=='\n'){row.push(f);rows.push(row);row=[];f="";} } else f+=c; }
   }
-  if(f.length || row.length){ row.push(f); rows.push(row); }
+  if(f.length||row.length){ row.push(f); rows.push(row); }
   return rows.filter(r=>r.some(c=>c.trim()!==""));
 }
-function rowsToItems(rows){
+function rowsToRecords(rows){
   if(!rows.length) throw new Error("the sheet is empty");
-  const head = rows[0].map(h=>h.trim().toLowerCase());
-  const idx = name => head.findIndex(h=>h===name||h.startsWith(name));
-  const ci = {section:idx("section"),entry:idx("entry"),bullet:idx("bullet"),
-    tags:idx("tag"),number:idx("number")>=0?idx("number"):idx("metric"),
-    source:idx("source"),best:idx("best"),notes:idx("note")};
-  if(ci.bullet<0) throw new Error('no "Bullet" column found in the header row');
-  const cell=(r,i)=> i>=0 ? (r[i]||"").trim() : "";
-  const truthy = v => /^(true|yes|x|1|★|y)$/i.test(v.trim());
-  return rows.slice(1).map((r,i)=>({
-    id:"i"+i,
-    section:cell(r,ci.section).toUpperCase(),
-    entry:cell(r,ci.entry),
-    bullet:cell(r,ci.bullet),
-    tags:cell(r,ci.tags).split(/[,/|]+/).map(t=>t.trim().toUpperCase()).filter(Boolean),
-    number:cell(r,ci.number),
-    source:cell(r,ci.source),
-    best:truthy(cell(r,ci.best)),
-    notes:cell(r,ci.notes),
-  })).filter(it=>it.bullet);
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const idx=n=>head.findIndex(h=>h===n||h.startsWith(n));
+  const ci={type:idx("type"),title:idx("title"),tags:idx("tag"),presets:idx("preset"),
+    date:idx("date")>=0?idx("date"):idx("start"),mod:idx("last")>=0?idx("last"):idx("modified"),notes:idx("note")};
+  const bcols=[]; head.forEach((h,i)=>{ if(h.startsWith("bullet")) bcols.push(i); });
+  if(ci.type<0) throw new Error('no "Type" column found');
+  const cell=(r,i)=> i>=0?(r[i]||"").trim():"";
+  const splitList=s=>s.split(/[,|]+/).map(x=>x.trim()).filter(Boolean);
+  return rows.slice(1).map(r=>({
+    type:cell(r,ci.type), title:cell(r,ci.title),
+    tags:splitList(cell(r,ci.tags)), presets:splitList(cell(r,ci.presets)),
+    date:cell(r,ci.date), mod:cell(r,ci.mod), notes:cell(r,ci.notes),
+    bullets:bcols.map(i=>cell(r,i)).filter(Boolean),
+  })).filter(x=>x.type);
 }
+function ingest(recs){
+  RAW=recs;
+  profile={name:"",contact:"",edu:null,skills:[]}; cwByPreset={}; entries=[];
+  recs.forEach(r=>{
+    const ty=r.type.toLowerCase();
+    if(ty==="profile"){
+      const t=r.title.toLowerCase();
+      if(t==="name") profile.name=r.bullets[0]||r.title;
+      else if(t==="contact") profile.contact=r.bullets[0]||"";
+      else if(t==="education") profile.edu={school:r.bullets[0]||"",degree:r.bullets[1]||"",date:r.date};
+      else if(t==="skill"||t==="skills") r.bullets.forEach(b=>profile.skills.push(b));
+    } else if(ty==="coursework"){
+      const courses=r.bullets.join(", ").split(",").map(c=>c.trim()).filter(Boolean);
+      r.presets.forEach(p=>{ cwByPreset[p]=courses; });
+    } else { entries.push(r); }
+  });
+  const found={}; entries.forEach(e=>e.presets.forEach(p=>found[p]=1)); Object.keys(cwByPreset).forEach(p=>found[p]=1);
+  presetList=PRESET_ORDER.filter(p=>found[p]).concat(Object.keys(found).filter(p=>!PRESET_ORDER.includes(p))).concat(["All"]);
+}
+
 async function loadSheet(url,quiet){
-  const csv = csvUrlFrom(url);
+  const csv=csvUrlFrom(url);
   if(!csv){ connected=false; setSource("idle"); render(); return; }
   try{
     setSource("idle","syncing…");
-    const res = await fetch(csv,{redirect:"follow"});
-    if(!res.ok) throw new Error("HTTP "+res.status+" — check sharing/publish settings");
-    const items = rowsToItems(parseCSV(await res.text()));
-    if(!items.length) throw new Error("no bullets found — check the Bullet column");
-    RAW = items; connected = true; setSource("live");
-    buildFilters(); syncPresetUI(); render();
-    if(!quiet) toast("Synced "+items.length+" items from Google Sheets");
+    const res=await fetch(csv,{redirect:"follow"}); if(!res.ok) throw new Error("HTTP "+res.status+" — check sharing/publish");
+    ingest(rowsToRecords(parseCSV(await res.text())));
+    if(!entries.length && !profile.name) throw new Error("no rows found — check Type column");
+    connected=true; setSource("live");
+    buildPresets();
+    applyPreset(presetList.find(p=>p!=="All")||"All");
+    if(!quiet) toast("Synced from Google Sheets");
     return "";
-  }catch(e){
-    setSource("err","sync failed");
-    render();
-    if(!quiet) toast("Couldn't load the sheet — "+e.message);
-    return e.message;
-  }
+  }catch(e){ setSource("err","sync failed"); render(); if(!quiet) toast("Couldn't load — "+e.message); return e.message; }
 }
 function setSource(kind,label){
-  const dot=document.getElementById("srcDot"), lab=document.getElementById("srcLabel");
-  dot.className = "dot" + (kind==="live"?" live":kind==="err"?" err":"");
-  lab.textContent = label || (kind==="live"?"Live · Google Sheets":kind==="err"?"Sync failed":"Not connected");
+  const d=document.getElementById("srcDot"),l=document.getElementById("srcLabel");
+  d.className="dot"+(kind==="live"?" live":kind==="err"?" err":"");
+  l.textContent=label||(kind==="live"?"Live · Google Sheets":kind==="err"?"Sync failed":"Not connected");
 }
 
-/* ---------- filters + render ---------- */
-function universeTags(){ const s=new Set(); RAW.forEach(i=>i.tags.forEach(t=>s.add(t)));
-  const known=["RTL","HLS","ARCH","ML","EMB","SW","LEAD","EDU","TITLE"];
-  return known.filter(t=>s.has(t)).concat([...s].filter(t=>!known.includes(t))); }
-function universeSections(){ const s=new Set(RAW.map(i=>i.section));
-  return SECTION_ORDER.filter(x=>s.has(x)).concat([...s].filter(x=>!SECTION_ORDER.includes(x))); }
-
-function buildFilters(){
-  const sc=document.getElementById("secChips"); sc.innerHTML="";
-  universeSections().forEach(s=>{
-    const n=RAW.filter(i=>i.section===s).length;
-    sc.appendChild(chip(s,s,state.sections,()=>render(),n));
-  });
-  const tc=document.getElementById("tagChips"); tc.innerHTML="";
-  universeTags().forEach(t=>{
-    const n=RAW.filter(i=>i.tags.includes(t)).length;
-    const el=chip(t,t,state.tags,()=>{syncPresetUI();render();},n);
-    el.dataset.tag=t; tc.appendChild(el);
-  });
+function buildPresets(){
+  const w=document.getElementById("presets"); w.innerHTML="";
+  presetList.forEach(p=>{ const b=document.createElement("button"); b.className="preset"+(state.filter===p?" on":""); b.textContent=p;
+    b.onclick=()=>applyPreset(p); w.appendChild(b); });
 }
-function chip(label,val,set,cb,count){
-  const b=document.createElement("button"); b.className="chip"+(set.has(val)?" on":"");
-  b.innerHTML=label+(count!=null?` <span class="ct">${count}</span>`:"");
-  b.onclick=()=>{ set.has(val)?set.delete(val):set.add(val); b.classList.toggle("on"); cb(); };
-  return b;
-}
-function passes(it){
-  if(state.sections.size && !state.sections.has(it.section)) return false;
-  if(state.tags.size && !it.tags.some(t=>state.tags.has(t))) return false;
-  if(state.bestOnly && !it.best) return false;
-  if(state.q){ const q=state.q.toLowerCase();
-    if(!(it.bullet+" "+it.entry+" "+it.notes).toLowerCase().includes(q)) return false; }
-  return true;
-}
-function render(){
-  const list=document.getElementById("list");
-  const filters=document.getElementById("filters");
-  // no sheet loaded → onboarding / error state
-  if(!RAW.length){
-    filters.classList.add("hide");
-    const failed = !connected && document.getElementById("srcDot").classList.contains("err");
-    list.innerHTML = `<div class="onboard${failed?" err":""}">
-      <div class="dia">◇</div>
-      <h2>${failed?"Couldn't reach that sheet":"Connect your Google Sheet"}</h2>
-      <p>${failed?"Check that it's published to the web (or link-shared) and try again.":"Every bullet on this page comes straight from your sheet. Point it at one to begin."}</p>
-      <button class="btn" id="onboardBtn">${failed?"Try again":"Connect a sheet"}</button>
-      <div class="cols">expected columns · Section · Entry · Bullet · Tags · Number · Source · Best · Notes</div>
-    </div>`;
-    document.getElementById("onboardBtn").onclick=()=>document.getElementById("cfgBtn").click();
-    renderTray(); persist(); return;
+function applyPreset(p){
+  state.filter=p;
+  if(p!=="All"){
+    state.selected=new Set(entries.map((e,i)=>e.presets.includes(p)?i:-1).filter(i=>i>=0));
+    if(cwByPreset[p]){ state.cwPreset=p; state.cwOn=true; state.cwCourses=new Set(cwByPreset[p].map((_,i)=>i)); }
   }
-  filters.classList.remove("hide");
-  list.innerHTML="";
-  const shown=RAW.filter(passes);
-  if(!shown.length){ list.innerHTML='<div class="empty"><b>Nothing matches those filters</b>Loosen a tag or clear the search to see more.</div>'; }
-  const bySec={}; shown.forEach(it=>{ (bySec[it.section]=bySec[it.section]||[]).push(it); });
-  universeSections().filter(s=>bySec[s]).forEach(sec=>{
-    const g=document.createElement("div"); g.className="grp";
-    g.innerHTML=`<h3>${esc(sec)}</h3>`;
-    const byEnt={}; bySec[sec].forEach(it=>{ (byEnt[it.entry]=byEnt[it.entry]||[]).push(it); });
-    Object.keys(byEnt).forEach(ent=>{
-      const src=[...new Set(byEnt[ent].map(i=>i.source).filter(Boolean))].join(" · ");
-      const h=document.createElement("h4"); h.innerHTML=`${esc(ent)} <span class="ent-src">${esc(src)}</span>`;
-      g.appendChild(h);
-      byEnt[ent].forEach(it=>g.appendChild(itemEl(it)));
-    });
-    list.appendChild(g);
-  });
-  renderTray(); persist();
+  render();
 }
-function itemEl(it){
-  const sel=state.selected.has(it.id);
-  const d=document.createElement("label"); d.className="item"+(sel?" sel":"");
-  const tags=it.tags.map(t=>`<span class="tag" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
-  d.innerHTML=`
-    <span class="box"><input type="checkbox" ${sel?"checked":""}></span>
-    <span class="body">
-      <span class="txt">${it.best?'<span class="star">★</span> ':''}${esc(it.bullet)}</span>
-      <span class="meta">${tags}${it.number?`<span class="num">${esc(it.number)}</span>`:""}<span class="srcbadge">${esc(it.source)}</span></span>
-      ${it.notes?`<span class="note">${esc(it.notes)}</span>`:""}
-    </span>`;
-  d.querySelector("input").onchange=e=>{
-    e.target.checked?state.selected.add(it.id):state.selected.delete(it.id);
-    d.classList.toggle("sel",e.target.checked); renderTray(); persist();
-  };
+
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function visibleEntries(){ return entries.map((e,i)=>({e,i})).filter(({e})=> (state.filter==="All"||!state.filter||e.presets.includes(state.filter)) && (!state.q||(e.title+" "+e.tags.join(" ")+" "+e.bullets.join(" ")).toLowerCase().includes(state.q)) ); }
+
+function render(){
+  const ws=document.getElementById("workspace");
+  if(!connected && !entries.length){
+    const failed=document.getElementById("srcDot").classList.contains("err");
+    ws.innerHTML=`<div class="onboard${failed?" err":""}"><div class="dia">◇</div><h2>${failed?"Couldn't reach that sheet":"Connect your Google Sheet"}</h2><p>${failed?"Check it's published to the web (or link-shared) and try again.":"Every line on this page comes from your sheet. Point it at one to begin."}</p><button class="btn" onclick="document.getElementById('cfgBtn').click()">${failed?"Try again":"Connect a sheet"}</button><div class="cols">Type · Title · Tags · Presets · Date · Bullet 1… · Notes</div></div>`;
+    return;
+  }
+  if(!document.getElementById("left")){ location.reload(); return; }
+  document.querySelectorAll(".preset").forEach(b=>b.classList.toggle("on",b.textContent===state.filter));
+  renderProfile(); renderCoursework(); renderList(); renderPreview();
+}
+function renderProfile(){
+  const p=document.getElementById("profban");
+  const bits=[profile.name||"—"]; if(profile.edu&&profile.edu.school) bits.push(profile.edu.school.split(",")[0]);
+  p.innerHTML=`<span class="pi">◇</span><div><div class="t">Profile &amp; education — always included</div><div class="s">${esc(bits.join(" · "))}</div></div>`;
+}
+function renderCoursework(){
+  const c=document.getElementById("cw"); const courses=(state.cwPreset&&cwByPreset[state.cwPreset])||[];
+  if(!courses.length){ c.style.display="none"; return; } c.style.display="";
+  const top=`<div class="top"><input type="checkbox" id="cwChk" ${state.cwOn?"checked":""}><div class="lab">Relevant coursework <b>auto · ${esc(state.cwPreset)}</b></div><button class="mo" id="cwMo">${state.cwOpen?"Hide options":"More options"}</button></div>`;
+  let chips=""; if(state.cwOpen){ chips='<div class="courses">'+courses.map((name,i)=>`<span class="cc${state.cwCourses.has(i)?" on":""}" data-ci="${i}">${esc(name)}</span>`).join("")+'</div>'; }
+  c.innerHTML=top+chips;
+  document.getElementById("cwChk").onchange=e=>{ state.cwOn=e.target.checked; renderPreview(); };
+  document.getElementById("cwMo").onclick=()=>{ state.cwOpen=!state.cwOpen; renderCoursework(); };
+  c.querySelectorAll(".cc").forEach(ch=>ch.onclick=()=>{ const i=+ch.dataset.ci; state.cwCourses.has(i)?state.cwCourses.delete(i):state.cwCourses.add(i); renderCoursework(); renderPreview(); });
+}
+function renderList(){
+  const L=document.getElementById("list"); L.innerHTML="";
+  const vis=visibleEntries();
+  if(!vis.length){ L.innerHTML='<p style="color:var(--faint);font-size:13px;padding:8px">No entries match. Try the All preset or clear the search.</p>'; return; }
+  SECTIONS.forEach(([ty,label])=>{
+    const rows=vis.filter(({e})=>e.type.toLowerCase()===ty.toLowerCase()); if(!rows.length) return;
+    const g=document.createElement("div"); g.className="grp"; g.innerHTML=`<h3>${label}</h3>`;
+    rows.forEach(({e,i})=>g.appendChild(entryEl(e,i))); L.appendChild(g);
+  });
+}
+function entryEl(e,i){
+  const sel=state.selected.has(i); const d=document.createElement("label"); d.className="entry"+(sel?" sel":"");
+  const tags=e.tags.map(t=>`<span class="tg">${esc(t)}</span>`).join("");
+  d.innerHTML=`<span class="box"><input type="checkbox" ${sel?"checked":""}></span><span class="body">
+    <span class="hd"><span class="ti">${esc(e.title)}</span><span class="dt">${esc(e.date)}</span></span>
+    <span class="bl">${esc(e.bullets[0]||"")}</span>
+    <span class="meta">${tags}${e.mod?`<span class="mod">updated ${esc(e.mod)}</span>`:""}</span></span>`;
+  d.querySelector("input").onchange=ev=>{ ev.target.checked?state.selected.add(i):state.selected.delete(i); d.classList.toggle("sel",ev.target.checked); renderPreview(); };
   return d;
 }
 
-/* ---------- tray + assembly ---------- */
-function selectedItems(){
-  const order={}; SECTION_ORDER.forEach((s,i)=>order[s]=i);
-  return RAW.filter(i=>state.selected.has(i.id))
-    .sort((a,b)=>(order[a.section]??9)-(order[b.section]??9));
+function resumeModel(){
+  const picked=entries.map((e,i)=>state.selected.has(i)?e:null).filter(Boolean);
+  const courses=(state.cwOn&&state.cwPreset&&cwByPreset[state.cwPreset])?cwByPreset[state.cwPreset].filter((_,i)=>state.cwCourses.has(i)):[];
+  const secs=SECTIONS.map(([ty,label])=>({label,items:picked.filter(e=>e.type.toLowerCase()===ty.toLowerCase())})).filter(s=>s.items.length);
+  return {profile,courses,secs,count:picked.length};
 }
-function renderTray(){
-  const items=selectedItems();
-  document.getElementById("trayCnt").textContent=items.length+" selected";
-  document.getElementById("fabCnt").textContent=items.length;
-  const tl=document.getElementById("traylist");
-  if(!items.length){ tl.innerHTML='<div class="trayempty"><div class="big">◇</div>Tick bullets on the left to assemble a resume here.</div>'; updateMeter(0,0); return; }
-  tl.innerHTML="";
-  const grouped=groupForResume(items);
-  grouped.forEach(([sec,ents])=>ents.forEach(([ent,bul])=>{
-    const g=document.createElement("div"); g.className="tgrp";
-    g.innerHTML=`<div class="tsec">${esc(sec)}</div><div class="tent">${esc(ent)}</div>`;
-    bul.forEach(it=>{
-      const r=document.createElement("div"); r.className="titem";
-      r.innerHTML=`<button class="rm" title="Remove">✕</button><span>${esc(it.bullet)}</span>`;
-      r.querySelector(".rm").onclick=()=>{ state.selected.delete(it.id); render(); };
-      g.appendChild(r);
-    });
-    tl.appendChild(g);
-  }));
-  let lines=0; grouped.forEach(([s,ents])=>ents.forEach(([e,bul])=>{
-    lines+=1; bul.forEach(it=>lines+=Math.max(1,Math.ceil(it.bullet.length/95))); }));
-  updateMeter(lines,items.length);
-}
-function groupForResume(items){
-  const order={}; SECTION_ORDER.forEach((s,i)=>order[s]=i);
-  const secs=[...new Set(items.map(i=>i.section))].sort((a,b)=>(order[a]??9)-(order[b]??9));
-  return secs.map(sec=>{
-    const its=items.filter(i=>i.section===sec);
-    const ents=[...new Set(its.map(i=>i.entry))];
-    return [sec, ents.map(ent=>[ent, its.filter(i=>i.entry===ent)])];
+function resumeHTML(){
+  const R=resumeModel();
+  if(!R.count && !R.courses.length) return `<div style="font-family:var(--serif);color:#9aa3ad;font-style:italic;text-align:center;padding:30px">Pick a preset or tick entries to build the resume.</div>`;
+  let h=`<div style="font-family:var(--serif);color:#111;font-size:12px;line-height:1.42">`;
+  h+=`<div style="text-align:center;font-size:20px;font-weight:bold;letter-spacing:.02em">${esc(R.profile.name)}</div>`;
+  if(R.profile.contact) h+=`<div style="text-align:center;font-size:11px;color:#333;margin-top:2px">${esc(R.profile.contact)}</div>`;
+  const sec=t=>`<div style="font-size:11.5px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;border-bottom:1.3px solid #111;margin:12px 0 4px">${t}</div>`;
+  if(R.profile.edu){ h+=sec("Education");
+    h+=`<div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:bold">${esc(R.profile.edu.school)}</span><span style="font-weight:bold;white-space:nowrap">${esc(R.profile.edu.date)}</span></div>`;
+    if(R.profile.edu.degree) h+=`<div>${esc(R.profile.edu.degree)}</div>`;
+    if(R.courses.length) h+=`<div><b>Relevant Coursework:</b> ${esc(R.courses.join(", "))}</div>`;
+  }
+  if(R.profile.skills.length){ h+=sec("Skills"); R.profile.skills.forEach(s=>h+=`<div>${esc(s)}</div>`); }
+  R.secs.forEach(s=>{ h+=sec(s.label);
+    s.items.forEach(e=>{ h+=`<div style="display:flex;justify-content:space-between;gap:8px;margin-top:5px"><span style="font-weight:bold">${esc(e.title)}</span><span style="font-weight:bold;white-space:nowrap">${esc(e.date)}</span></div>`;
+      if(e.bullets.length){ h+=`<ul style="margin:2px 0 0;padding-left:16px">`+e.bullets.map(b=>`<li style="margin:1px 0">${esc(b)}</li>`).join("")+`</ul>`; } });
   });
+  return h+`</div>`;
 }
-function updateMeter(lines,n){
-  const cap=45, pct=Math.min(100,Math.round(lines/cap*100));
-  const m=document.getElementById("meter");
-  document.getElementById("meterFill").style.width=(n?Math.max(4,pct):0)+"%";
-  document.getElementById("meterPct").textContent=n?pct+"%":"0%";
-  document.getElementById("meterLbl").textContent=n?`≈ ${lines} lines · rough one-page fit`:"empty";
-  m.classList.toggle("over",lines>cap);
-}
-function assemble(md){
-  const out=[];
-  groupForResume(selectedItems()).forEach(([sec,ents])=>{
-    out.push(md?`### ${sec}`:sec.toUpperCase());
-    ents.forEach(([ent,bul])=>{
-      out.push(md?`**${ent}**`:ent);
-      bul.forEach(it=>out.push((md?"- ":"• ")+it.bullet));
-    });
-    out.push("");
-  });
-  return out.join("\n").trim();
+function renderPreview(){
+  document.getElementById("paper").innerHTML=resumeHTML();
+  const R=resumeModel(); let lines=R.profile.edu?3:0; if(R.courses.length)lines++; lines+=R.profile.skills.length;
+  R.secs.forEach(s=>{ lines++; s.items.forEach(e=>{ lines+=1+e.bullets.length; }); });
+  const cap=46,pct=Math.min(100,Math.round(lines/cap*100)),any=R.count||R.courses.length;
+  document.getElementById("fl").style.width=(any?Math.max(5,pct):0)+"%";
+  document.getElementById("lb").textContent=any?`≈ ${lines} lines · ${pct}% of one page`:"empty";
+  document.getElementById("meter").classList.toggle("over",lines>cap);
 }
 
-/* ---------- misc ---------- */
-function persist(){ store.set("rb_sel",JSON.stringify([...state.selected])); }
-function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
-function copy(text){ navigator.clipboard.writeText(text).then(()=>toast("Copied to clipboard"),()=>toast("Copy failed")); }
-function syncPresetUI(){
-  document.querySelectorAll(".preset").forEach((b,i)=>{
-    const p=PRESETS[i];
-    const on = p.tags.length>0 && p.tags.length===state.tags.size && p.tags.every(t=>state.tags.has(t));
-    b.classList.toggle("on", on || (p.name==="All"&&state.tags.size===0));
-  });
+function assembleText(md){
+  const R=resumeModel(); const L=[];
+  L.push(md?`# ${R.profile.name}`:R.profile.name.toUpperCase()); if(R.profile.contact)L.push(R.profile.contact); L.push("");
+  if(R.profile.edu){ L.push(md?"### Education":"EDUCATION"); L.push((R.profile.edu.school+(R.profile.edu.date?"  —  "+R.profile.edu.date:"")).trim()); if(R.profile.edu.degree)L.push(R.profile.edu.degree); if(R.courses.length)L.push("Relevant Coursework: "+R.courses.join(", ")); L.push(""); }
+  if(R.profile.skills.length){ L.push(md?"### Skills":"SKILLS"); R.profile.skills.forEach(s=>L.push(s)); L.push(""); }
+  R.secs.forEach(s=>{ L.push(md?`### ${s.label}`:s.label.toUpperCase());
+    s.items.forEach(e=>{ L.push((md?`**${e.title}**`:e.title)+(e.date?"  —  "+e.date:"")); e.bullets.forEach(b=>L.push((md?"- ":"• ")+b)); }); L.push(""); });
+  return L.join("\n").trim();
+}
+function fileName(){ return ("Lucas-Le-Resume-"+(state.cwPreset||state.filter||"All")).replace(/[^\w-]+/g,"-").replace(/-+/g,"-"); }
+function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
+function download(blob,name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
+
+function exportPDF(){ const old=document.title; document.title=fileName(); window.addEventListener("afterprint",function h(){document.title=old;window.removeEventListener("afterprint",h);}); window.print(); }
+function exportRich(){
+  const html="<meta charset='utf-8'>"+resumeHTML(), text=assembleText(false);
+  if(navigator.clipboard&&window.ClipboardItem){
+    navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]).then(()=>toast("Rich text copied — paste into Docs or Word"),()=>navigator.clipboard.writeText(text).then(()=>toast("Copied as text")));
+  } else navigator.clipboard.writeText(text).then(()=>toast("Copied as text"));
+}
+function exportLink(){ const u=store.get("rb_url"); const link=location.origin+location.pathname+(u?("?sheet="+encodeURIComponent(u)):""); navigator.clipboard.writeText(link).then(()=>toast(u?"Share link copied":"Connect a sheet first, then copy")); }
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("CDN load failed")); document.head.appendChild(s); }); }
+async function exportDocx(){
+  try{
+    if(!window.docx){ toast("Preparing Word export…"); await loadScript(DOCX_CDN); }
+    if(!window.docx) throw new Error("library unavailable");
+    const D=window.docx, R=resumeModel();
+    const RIGHT=10512, kids=[];
+    const tabRow=(l,r,bold)=>new D.Paragraph({tabStops:[{type:D.TabStopType.RIGHT,position:RIGHT}],children:[new D.TextRun({text:l,bold:!!bold}),new D.TextRun({text:"\t"+(r||""),bold:!!bold})]});
+    const sec=t=>new D.Paragraph({spacing:{before:200,after:60},border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:"111111"}},children:[new D.TextRun({text:t.toUpperCase(),bold:true,size:22})]});
+    const line=(t,o)=>new D.Paragraph(Object.assign({children:[new D.TextRun({text:t,size:22})]},o||{}));
+    kids.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,children:[new D.TextRun({text:R.profile.name,bold:true,size:34})]}));
+    if(R.profile.contact) kids.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,children:[new D.TextRun({text:R.profile.contact,size:18})]}));
+    if(R.profile.edu){ kids.push(sec("Education")); kids.push(tabRow(R.profile.edu.school,R.profile.edu.date,true)); if(R.profile.edu.degree)kids.push(line(R.profile.edu.degree)); if(R.courses.length)kids.push(new D.Paragraph({children:[new D.TextRun({text:"Relevant Coursework: ",bold:true,size:22}),new D.TextRun({text:R.courses.join(", "),size:22})]})); }
+    if(R.profile.skills.length){ kids.push(sec("Skills")); R.profile.skills.forEach(s=>kids.push(line(s))); }
+    R.secs.forEach(s=>{ kids.push(sec(s.label)); s.items.forEach(e=>{ kids.push(tabRow(e.title,e.date,true)); e.bullets.forEach(b=>kids.push(new D.Paragraph({bullet:{level:0},children:[new D.TextRun({text:b,size:22})]}))); }); });
+    const doc=new D.Document({sections:[{properties:{page:{size:{width:12240,height:15840},margin:{top:864,bottom:864,left:864,right:864}}},children:kids}]});
+    const blob=await D.Packer.toBlob(doc); download(blob,fileName()+".docx"); toast("Word file downloaded");
+  }catch(e){ toast("Word export failed — "+e.message); }
 }
 
-/* ---------- wire up ---------- */
-const presetWrap=document.getElementById("presets");
-PRESETS.forEach(p=>{
-  const b=document.createElement("button"); b.className="preset"; b.textContent=p.name;
-  b.onclick=()=>{ state.tags=new Set(p.tags); buildFilters(); syncPresetUI(); render(); };
-  presetWrap.appendChild(b);
-});
-document.getElementById("q").oninput=e=>{ state.q=e.target.value; render(); };
-document.getElementById("bestOnly").onchange=e=>{ state.bestOnly=e.target.checked; render(); };
-document.getElementById("copyMd").onclick=()=>state.selected.size?copy(assemble(true)):toast("Nothing selected yet");
-document.getElementById("copyTxt").onclick=()=>state.selected.size?copy(assemble(false)):toast("Nothing selected yet");
-document.getElementById("clearBtn").onclick=()=>{ state.selected.clear(); render(); };
-document.getElementById("dlMd").onclick=()=>{
-  if(!state.selected.size) return toast("Nothing selected yet");
-  const blob=new Blob([assemble(true)],{type:"text/markdown"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download="resume-draft.md"; a.click(); URL.revokeObjectURL(a.href);
-};
-document.getElementById("trayFab").onclick=()=>document.getElementById("tray").classList.toggle("open");
+document.getElementById("q").oninput=e=>{ state.q=e.target.value.toLowerCase(); renderList(); };
+const menu=document.getElementById("exportMenu");
+document.getElementById("exportBtn").onclick=e=>{ e.stopPropagation(); menu.classList.toggle("open"); };
+document.addEventListener("click",()=>menu.classList.remove("open"));
+menu.onclick=e=>{ const b=e.target.closest("button"); if(!b) return; menu.classList.remove("open");
+  const a=b.dataset.act; if(a==="pdf")exportPDF(); else if(a==="docx")exportDocx(); else if(a==="rich")exportRich();
+  else if(a==="md")navigator.clipboard.writeText(assembleText(true)).then(()=>toast("Markdown copied"));
+  else if(a==="txt")navigator.clipboard.writeText(assembleText(false)).then(()=>toast("Text copied"));
+  else if(a==="link")exportLink(); };
 
 const cfg=document.getElementById("cfg");
 document.getElementById("cfgBtn").onclick=()=>{ document.getElementById("cfgUrl").value=store.get("rb_url")||""; document.getElementById("cfgStatus").textContent=""; cfg.showModal(); };
 document.getElementById("cfgCancel").onclick=()=>cfg.close();
-document.getElementById("cfgDisconnect").onclick=()=>{ store.set("rb_url",""); RAW=[]; connected=false; setSource("idle"); buildFilters(); render(); cfg.close(); toast("Disconnected"); };
-document.getElementById("cfgSave").onclick=async()=>{
-  const url=document.getElementById("cfgUrl").value.trim();
-  const st=document.getElementById("cfgStatus");
-  st.className="status"; st.textContent="Connecting…";
-  const err=await loadSheet(url,true);
-  if(err){ st.className="status err"; st.textContent="Couldn't load: "+err; }
-  else{ store.set("rb_url",url); st.className="status ok"; st.textContent="Connected."; setTimeout(()=>cfg.close(),500); toast("Connected to Google Sheets"); }
-};
+document.getElementById("cfgDisconnect").onclick=()=>{ store.set("rb_url",""); RAW=[];entries=[];connected=false; setSource("idle"); render(); cfg.close(); toast("Disconnected"); };
+document.getElementById("cfgSave").onclick=async()=>{ const url=document.getElementById("cfgUrl").value.trim(); const st=document.getElementById("cfgStatus"); st.className="status"; st.textContent="Connecting…";
+  const err=await loadSheet(url,true); if(err){ st.className="status err"; st.textContent="Couldn't load: "+err; } else { store.set("rb_url",url); st.className="status ok"; st.textContent="Connected."; setTimeout(()=>cfg.close(),500); toast("Connected"); } };
 document.getElementById("refreshBtn").onclick=()=>{ const u=store.get("rb_url"); u?loadSheet(u):document.getElementById("cfgBtn").click(); };
 
-/* init: ?sheet= URL param wins, then the remembered link, else onboarding */
-buildFilters(); syncPresetUI();
 const param=new URLSearchParams(location.search).get("sheet");
 if(param){ store.set("rb_url",param); loadSheet(param,true); }
-else{ const saved=store.get("rb_url"); if(saved) loadSheet(saved,true); else { setSource("idle"); render(); } }
+else { const saved=store.get("rb_url"); if(saved) loadSheet(saved,true); else { setSource("idle"); render(); } }
 </script>
 </body>
 </html>
