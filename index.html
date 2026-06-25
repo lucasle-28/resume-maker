@@ -179,7 +179,8 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
     <ol>
       <li><code>File → Share → Publish to web</code>, pick the tab, format <b>Comma-separated values (.csv)</b>, Publish.</li>
       <li>Paste that link above. A plain <code>/edit</code> link works too if the sheet is link-shared.</li>
-      <li>Columns: <code>Type, Title, Tags, Presets, Date, Bullet 1…, Notes</code>.</li>
+      <li>Sections are divider rows (<code>EXPERIENCE</code>, <code>PROJECTS</code>…); the row under each divider is a decorative label and is skipped.</li>
+      <li>Fixed columns: <code>Title, Tags, Presets, Date, Bullet 1–4, Last Modified, Notes</code>.</li>
     </ol>
     <div class="row">
       <button class="btn ghost" id="cfgDisconnect">Disconnect</button>
@@ -192,7 +193,9 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
 
 <script>
 const PRESET_ORDER = ["FPGA / ASIC","Embedded","DSP","ML / Accel","Research","Software"];
-const SECTIONS = [["Experience","Experience"],["Project","Projects"],["Leadership","Leadership"]];
+const SECTION_DEFS = [{key:"EXPERIENCE",label:"Experience"},{key:"PROJECTS",label:"Projects"},{key:"LEADERSHIP",label:"Leadership"}];
+const DIVIDERS = ["PROFILE","COURSEWORK","EXPERIENCE","PROJECTS","LEADERSHIP"];
+const COL = {title:0,tags:1,presets:2,date:3,b1:4,b2:5,b3:6,b4:7,mod:8,notes:9};
 const DOCX_CDN = "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js";
 
 const store = { get(k){ try{return localStorage.getItem(k);}catch(e){return null;} }, set(k,v){ try{localStorage.setItem(k,v);}catch(e){} } };
@@ -219,21 +222,25 @@ function parseCSV(text){
   return rows.filter(r=>r.some(c=>c.trim()!==""));
 }
 function rowsToRecords(rows){
-  if(!rows.length) throw new Error("the sheet is empty");
-  const head=rows[0].map(h=>h.trim().toLowerCase());
-  const idx=n=>head.findIndex(h=>h===n||h.startsWith(n));
-  const ci={type:idx("type"),title:idx("title"),tags:idx("tag"),presets:idx("preset"),
-    date:idx("date")>=0?idx("date"):idx("start"),mod:idx("last")>=0?idx("last"):idx("modified"),notes:idx("note")};
-  const bcols=[]; head.forEach((h,i)=>{ if(h.startsWith("bullet")) bcols.push(i); });
-  if(ci.type<0) throw new Error('no "Type" column found');
-  const cell=(r,i)=> i>=0?(r[i]||"").trim():"";
+  const cell=(r,i)=>(r&&r[i]!=null?String(r[i]):"").trim();
+  const nonEmpty=r=>r.some(c=>(c!=null?String(c):"").trim()!=="");
+  const isDivider=r=>{ const a=cell(r,0).toUpperCase(); return DIVIDERS.includes(a) && r.every((c,i)=>i===0||(c!=null?String(c):"").trim()===""); };
   const splitList=s=>s.split(/[,|]+/).map(x=>x.trim()).filter(Boolean);
-  return rows.slice(1).map(r=>({
-    type:cell(r,ci.type), title:cell(r,ci.title),
-    tags:splitList(cell(r,ci.tags)), presets:splitList(cell(r,ci.presets)),
-    date:cell(r,ci.date), mod:cell(r,ci.mod), notes:cell(r,ci.notes),
-    bullets:bcols.map(i=>cell(r,i)).filter(Boolean),
-  })).filter(x=>x.type);
+  const recs=[]; let section=null, skipNext=false;
+  for(const r of rows){
+    if(!nonEmpty(r)) continue;
+    if(isDivider(r)){ section=cell(r,0).toUpperCase(); skipNext=true; continue; }
+    if(skipNext){ skipNext=false; continue; }
+    if(!section) continue;
+    recs.push({
+      type:section, title:cell(r,COL.title),
+      tags:splitList(cell(r,COL.tags)), presets:splitList(cell(r,COL.presets)),
+      date:cell(r,COL.date), mod:cell(r,COL.mod), notes:cell(r,COL.notes),
+      bullets:[cell(r,COL.b1),cell(r,COL.b2),cell(r,COL.b3),cell(r,COL.b4)].filter(Boolean),
+    });
+  }
+  if(!recs.length) throw new Error("no rows found — check the divider rows");
+  return recs;
 }
 function ingest(recs){
   RAW=recs;
@@ -297,7 +304,7 @@ function render(){
   const ws=document.getElementById("workspace");
   if(!connected && !entries.length){
     const failed=document.getElementById("srcDot").classList.contains("err");
-    ws.innerHTML=`<div class="onboard${failed?" err":""}"><div class="dia">◇</div><h2>${failed?"Couldn't reach that sheet":"Connect your Google Sheet"}</h2><p>${failed?"Check it's published to the web (or link-shared) and try again.":"Every line on this page comes from your sheet. Point it at one to begin."}</p><button class="btn" onclick="document.getElementById('cfgBtn').click()">${failed?"Try again":"Connect a sheet"}</button><div class="cols">Type · Title · Tags · Presets · Date · Bullet 1… · Notes</div></div>`;
+    ws.innerHTML=`<div class="onboard${failed?" err":""}"><div class="dia">◇</div><h2>${failed?"Couldn't reach that sheet":"Connect your Google Sheet"}</h2><p>${failed?"Check it's published to the web (or link-shared) and try again.":"Every line on this page comes from your sheet. Point it at one to begin."}</p><button class="btn" onclick="document.getElementById('cfgBtn').click()">${failed?"Try again":"Connect a sheet"}</button><div class="cols">divider rows set sections · columns: Title · Tags · Presets · Date · Bullet 1–4 · Notes</div></div>`;
     return;
   }
   if(!document.getElementById("left")){ location.reload(); return; }
@@ -323,8 +330,8 @@ function renderList(){
   const L=document.getElementById("list"); L.innerHTML="";
   const vis=visibleEntries();
   if(!vis.length){ L.innerHTML='<p style="color:var(--faint);font-size:13px;padding:8px">No entries match. Try the All preset or clear the search.</p>'; return; }
-  SECTIONS.forEach(([ty,label])=>{
-    const rows=vis.filter(({e})=>e.type.toLowerCase()===ty.toLowerCase()); if(!rows.length) return;
+  SECTION_DEFS.forEach(({key,label})=>{
+    const rows=vis.filter(({e})=>e.type===key); if(!rows.length) return;
     const g=document.createElement("div"); g.className="grp"; g.innerHTML=`<h3>${label}</h3>`;
     rows.forEach(({e,i})=>g.appendChild(entryEl(e,i))); L.appendChild(g);
   });
@@ -343,7 +350,7 @@ function entryEl(e,i){
 function resumeModel(){
   const picked=entries.map((e,i)=>state.selected.has(i)?e:null).filter(Boolean);
   const courses=(state.cwOn&&state.cwPreset&&cwByPreset[state.cwPreset])?cwByPreset[state.cwPreset].filter((_,i)=>state.cwCourses.has(i)):[];
-  const secs=SECTIONS.map(([ty,label])=>({label,items:picked.filter(e=>e.type.toLowerCase()===ty.toLowerCase())})).filter(s=>s.items.length);
+  const secs=SECTION_DEFS.map(({key,label})=>({label,items:picked.filter(e=>e.type===key)})).filter(s=>s.items.length);
   return {profile,courses,secs,count:picked.length};
 }
 function resumeHTML(){
