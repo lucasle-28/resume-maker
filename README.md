@@ -43,11 +43,12 @@ One tab, read top-to-bottom. Sections come from **divider rows**, not a column �
 - **Last Modified** — freshness note in the picker; never printed.
 - **Notes** — picker-only; never printed.
 
-**PROFILE section** (hidden from picker, always on the resume) reuses the columns:
-- `Name` → Bullet 1 = your name
-- `Contact` → Bullet 1 = contact line
-- `Education` → Bullet 1 = school, Bullet 2 = degree line (GPA inline), Date = grad date
-- `Skill` → one row per line (Bullet 1 = `Languages: …`); add as many as you want
+**PROFILE section** (hidden from picker, always on the resume) — slim, values packed left-to-right after column A:
+- `Name` → next cell = your name
+- `Contact` → one item per cell across the row (`Contact | U.S. Citizen | email | phone | linkedin | github`); joined with " • " on the resume. Add/remove a contact item = add/clear a cell.
+- `Education` → next cells = school, then degree line (GPA inline), then grad date
+
+**SKILLS section** — one row per preset, fixed category columns: `Preset | Languages | Tools | Hardware`. Each category cell is a comma-separated list. Click a preset → its skills row renders as the three split lines; **All** merges and de-dupes every preset's skills.
 
 **COURSEWORK section** — one row per course: Title = the course name, Presets = which presets it belongs to. The app collects the courses tagged to the active preset into the single "Relevant Coursework" line; More options lets you add/drop individual courses. (All shows the deduped union of every course.)
 

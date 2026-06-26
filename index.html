@@ -204,15 +204,15 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
 <script>
 const PRESET_ORDER = ["FPGA / ASIC","Embedded","DSP","ML / Accel","Research","Software"];
 const SECTION_DEFS = [{key:"EXPERIENCE",label:"Experience"},{key:"PROJECTS",label:"Projects"},{key:"LEADERSHIP",label:"Leadership"}];
-const DIVIDERS = ["PROFILE","COURSEWORK","EXPERIENCE","PROJECTS","LEADERSHIP"];
+const DIVIDERS = ["PROFILE","COURSEWORK","SKILLS","EXPERIENCE","PROJECTS","LEADERSHIP"];
 const COL = {title:0,tags:1,presets:2,date:3,b1:4,b2:5,b3:6,b4:7,mod:8,notes:9};
 const DOCX_CDN = "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js";
 
 const store = { get(k){ try{return localStorage.getItem(k);}catch(e){return null;} }, set(k,v){ try{localStorage.setItem(k,v);}catch(e){} } };
 
 let RAW=[], connected=false;
-let profile={name:"",contact:"",edu:null,skills:[]}, cwByPreset={}, entries=[], presetList=[];
-const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"", tagFilter:new Set(), tagOpen:false };
+let profile={name:"",contact:"",edu:null}, cwByPreset={}, skillsByPreset={}, entries=[], presetList=[];
+const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"", tagFilter:new Set(), tagOpen:false, skillsPreset:null };
 
 function csvUrlFrom(input){
   input=(input||"").trim(); if(!input) return "";
@@ -247,6 +247,7 @@ function rowsToRecords(rows){
       tags:splitList(cell(r,COL.tags)), presets:splitList(cell(r,COL.presets)),
       date:cell(r,COL.date), mod:cell(r,COL.mod), notes:cell(r,COL.notes),
       bullets:[cell(r,COL.b1),cell(r,COL.b2),cell(r,COL.b3),cell(r,COL.b4)].filter(Boolean),
+      cells:r.map(c=>(c!=null?String(c):"").trim()),
     });
   }
   if(!recs.length) throw new Error("no rows found — check the divider rows");
@@ -254,23 +255,32 @@ function rowsToRecords(rows){
 }
 function ingest(recs){
   RAW=recs;
-  profile={name:"",contact:"",edu:null,skills:[]}; cwByPreset={}; entries=[];
+  profile={name:"",contact:"",edu:null}; cwByPreset={}; skillsByPreset={}; entries=[];
+  const SKILL_CATS=["Languages","Tools","Hardware"];
   recs.forEach(r=>{
     const ty=r.type.toLowerCase();
+    const after=r.cells.slice(1).filter(Boolean);   // non-empty cells after column A
     if(ty==="profile"){
       const t=r.title.toLowerCase();
-      if(t==="name") profile.name=r.bullets[0]||r.title;
-      else if(t==="contact") profile.contact=r.bullets[0]||"";
-      else if(t==="education") profile.edu={school:r.bullets[0]||"",degree:r.bullets[1]||"",date:r.date};
-      else if(t==="skill"||t==="skills") r.bullets.forEach(b=>profile.skills.push(b));
+      if(t==="name") profile.name=after[0]||"";
+      else if(t==="contact") profile.contact=after.join(" • ");
+      else if(t==="education") profile.edu={school:after[0]||"",degree:after[1]||"",date:after[2]||""};
     } else if(ty==="coursework"){
       const name=r.title; if(name) r.presets.forEach(p=>{ cwByPreset[p]=cwByPreset[p]||[]; if(!cwByPreset[p].includes(name)) cwByPreset[p].push(name); });
+    } else if(ty==="skills"){
+      const preset=r.cells[0]; if(!preset) return;
+      const cats=SKILL_CATS.map((label,i)=>({label,items:(r.cells[i+1]||"").split(/[,|]+/).map(x=>x.trim()).filter(Boolean)})).filter(c=>c.items.length);
+      if(cats.length) skillsByPreset[preset]=cats;
     } else { entries.push(r); }
   });
-  const found={}; entries.forEach(e=>e.presets.forEach(p=>found[p]=1)); Object.keys(cwByPreset).forEach(p=>found[p]=1);
-  const union=[]; PRESET_ORDER.forEach(p=>{ (cwByPreset[p]||[]).forEach(c=>{ if(!union.includes(c)) union.push(c); }); });
-  Object.keys(cwByPreset).forEach(p=>{ if(!PRESET_ORDER.includes(p)) cwByPreset[p].forEach(c=>{ if(!union.includes(c)) union.push(c); }); });
-  if(union.length) cwByPreset["All"]=union;
+  const found={}; entries.forEach(e=>e.presets.forEach(p=>found[p]=1)); Object.keys(cwByPreset).forEach(p=>found[p]=1); Object.keys(skillsByPreset).forEach(p=>found[p]=1);
+  const order=p=>{ const i=PRESET_ORDER.indexOf(p); return i<0?99:i; };
+  const cwUnion=[]; Object.keys(cwByPreset).sort((a,b)=>order(a)-order(b)).forEach(p=>cwByPreset[p].forEach(c=>{ if(!cwUnion.includes(c)) cwUnion.push(c); }));
+  if(cwUnion.length) cwByPreset["All"]=cwUnion;
+  const merged={}; SKILL_CATS.forEach(c=>merged[c]=[]);
+  Object.keys(skillsByPreset).sort((a,b)=>order(a)-order(b)).forEach(p=>skillsByPreset[p].forEach(c=>c.items.forEach(it=>{ if(!merged[c.label].includes(it)) merged[c.label].push(it); })));
+  const allSkills=SKILL_CATS.map(label=>({label,items:merged[label]})).filter(c=>c.items.length);
+  if(allSkills.length) skillsByPreset["All"]=allSkills;
   presetList=PRESET_ORDER.filter(p=>found[p]).concat(Object.keys(found).filter(p=>!PRESET_ORDER.includes(p)&&p!=="All")).concat(["All"]);
 }
 
@@ -305,6 +315,7 @@ function applyPreset(p){
   if(p==="All"){ state.selected=new Set(entries.map((_,i)=>i)); }
   else { state.selected=new Set(entries.map((e,i)=>e.presets.includes(p)?i:-1).filter(i=>i>=0)); }
   if(cwByPreset[p]){ state.cwPreset=p; state.cwOn=true; state.cwCourses=new Set(cwByPreset[p].map((_,i)=>i)); }
+  if(skillsByPreset[p]){ state.skillsPreset=p; }
   render();
 }
 
@@ -373,7 +384,8 @@ function resumeModel(){
   const picked=entries.map((e,i)=>state.selected.has(i)?e:null).filter(Boolean);
   const courses=(state.cwOn&&state.cwPreset&&cwByPreset[state.cwPreset])?cwByPreset[state.cwPreset].filter((_,i)=>state.cwCourses.has(i)):[];
   const secs=SECTION_DEFS.map(({key,label})=>({label,items:picked.filter(e=>e.type===key)})).filter(s=>s.items.length);
-  return {profile,courses,secs,count:picked.length};
+  const skills=(state.skillsPreset&&skillsByPreset[state.skillsPreset])||[];
+  return {profile,courses,skills,secs,count:picked.length};
 }
 function resumeHTML(){
   const R=resumeModel();
@@ -387,7 +399,7 @@ function resumeHTML(){
     if(R.profile.edu.degree) h+=`<div>${esc(R.profile.edu.degree)}</div>`;
     if(R.courses.length) h+=`<div><b>Relevant Coursework:</b> ${esc(R.courses.join(", "))}</div>`;
   }
-  if(R.profile.skills.length){ h+=sec("Skills"); R.profile.skills.forEach(s=>h+=`<div>${esc(s)}</div>`); }
+  if(R.skills.length){ h+=sec("Skills"); R.skills.forEach(c=>h+=`<div><b>${esc(c.label)}:</b> ${esc(c.items.join(", "))}</div>`); }
   R.secs.forEach(s=>{ h+=sec(s.label);
     s.items.forEach(e=>{ h+=`<div style="display:flex;justify-content:space-between;gap:8px;margin-top:5px"><span style="font-weight:bold">${esc(e.title)}</span><span style="font-weight:bold;white-space:nowrap">${esc(e.date)}</span></div>`;
       if(e.bullets.length){ h+=`<ul style="margin:2px 0 0;padding-left:16px">`+e.bullets.map(b=>`<li style="margin:1px 0">${esc(b)}</li>`).join("")+`</ul>`; } });
@@ -396,7 +408,7 @@ function resumeHTML(){
 }
 function renderPreview(){
   document.getElementById("paper").innerHTML=resumeHTML();
-  const R=resumeModel(); let lines=R.profile.edu?3:0; if(R.courses.length)lines++; lines+=R.profile.skills.length;
+  const R=resumeModel(); let lines=R.profile.edu?3:0; if(R.courses.length)lines++; lines+=R.skills.length;
   R.secs.forEach(s=>{ lines++; s.items.forEach(e=>{ lines+=1+e.bullets.length; }); });
   const cap=46,pct=Math.round(lines/cap*100),any=R.count||R.courses.length,over=pct>100;
   document.getElementById("fl").style.width=(any?Math.min(100,Math.max(5,pct)):0)+"%";
@@ -408,7 +420,7 @@ function assembleText(md){
   const R=resumeModel(); const L=[];
   L.push(md?`# ${R.profile.name}`:R.profile.name.toUpperCase()); if(R.profile.contact)L.push(R.profile.contact); L.push("");
   if(R.profile.edu){ L.push(md?"### Education":"EDUCATION"); L.push((R.profile.edu.school+(R.profile.edu.date?"  —  "+R.profile.edu.date:"")).trim()); if(R.profile.edu.degree)L.push(R.profile.edu.degree); if(R.courses.length)L.push("Relevant Coursework: "+R.courses.join(", ")); L.push(""); }
-  if(R.profile.skills.length){ L.push(md?"### Skills":"SKILLS"); R.profile.skills.forEach(s=>L.push(s)); L.push(""); }
+  if(R.skills.length){ L.push(md?"### Skills":"SKILLS"); R.skills.forEach(c=>L.push((md?`**${c.label}:** `:`${c.label}: `)+c.items.join(", "))); L.push(""); }
   R.secs.forEach(s=>{ L.push(md?`### ${s.label}`:s.label.toUpperCase());
     s.items.forEach(e=>{ L.push((md?`**${e.title}**`:e.title)+(e.date?"  —  "+e.date:"")); e.bullets.forEach(b=>L.push((md?"- ":"• ")+b)); }); L.push(""); });
   return L.join("\n").trim();
@@ -438,7 +450,7 @@ async function exportDocx(){
     kids.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,children:[new D.TextRun({text:R.profile.name,bold:true,size:34})]}));
     if(R.profile.contact) kids.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,children:[new D.TextRun({text:R.profile.contact,size:18})]}));
     if(R.profile.edu){ kids.push(sec("Education")); kids.push(tabRow(R.profile.edu.school,R.profile.edu.date,true)); if(R.profile.edu.degree)kids.push(line(R.profile.edu.degree)); if(R.courses.length)kids.push(new D.Paragraph({children:[new D.TextRun({text:"Relevant Coursework: ",bold:true,size:22}),new D.TextRun({text:R.courses.join(", "),size:22})]})); }
-    if(R.profile.skills.length){ kids.push(sec("Skills")); R.profile.skills.forEach(s=>kids.push(line(s))); }
+    if(R.skills.length){ kids.push(sec("Skills")); R.skills.forEach(c=>kids.push(new D.Paragraph({children:[new D.TextRun({text:c.label+": ",bold:true,size:22}),new D.TextRun({text:c.items.join(", "),size:22})]}))); }
     R.secs.forEach(s=>{ kids.push(sec(s.label)); s.items.forEach(e=>{ kids.push(tabRow(e.title,e.date,true)); e.bullets.forEach(b=>kids.push(new D.Paragraph({bullet:{level:0},children:[new D.TextRun({text:b,size:22})]}))); }); });
     const doc=new D.Document({sections:[{properties:{page:{size:{width:12240,height:15840},margin:{top:864,bottom:864,left:864,right:864}}},children:kids}]});
     const blob=await D.Packer.toBlob(doc); download(blob,fileName()+".docx"); toast("Word file downloaded");
