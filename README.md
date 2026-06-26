@@ -50,12 +50,12 @@ One tab, read top-to-bottom. Sections come from **divider rows**, not a column �
 
 **SKILLS section** — one row per preset, fixed category columns: `Preset | Languages | Tools | Hardware`. Each category cell is a comma-separated list. Click a preset → its skills row renders as the three split lines; **All** merges and de-dupes every preset's skills.
 
-**COURSEWORK section** — one row per course: Title = the course name, Presets = which presets it belongs to. The app collects the courses tagged to the active preset into the single "Relevant Coursework" line; More options lets you add/drop individual courses. (All shows the deduped union of every course.)
+**COURSEWORK section** — one row per course: Title = the course name, Presets = which presets it belongs to. The app collects the courses tagged to the active preset into the single "Relevant Coursework" line; More options expands the full course catalog (every course, with the preset's pre-checked) so you can add/drop any of them. (All shows the deduped union of every course.)
 
 ## Using it
 - Click a **preset** → filters to its entries and auto-selects them (plus that preset's coursework). **All** shows everything and keeps your selection, so you can add an off-preset entry.
 - **Coursework** shows as one line; **More options** expands the individual courses to add/drop.
-- Tick/untick entries → the **live preview** updates instantly.
+- Tick/untick entries → the **live preview** updates instantly. The resume's font auto-scales to fill one page; the readout shows the body point size (e.g. "Body 10.5 pt") and warns when it's too small to fit, so trim entries when you see that.
 - **Export** (top right): Save as PDF · Download .docx · Copy rich text (Docs/Word) · Copy as Markdown · Copy as text · Copy share link. PDF/.docx filenames use the active preset.
 
 ## Notes

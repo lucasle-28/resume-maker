@@ -314,7 +314,7 @@ function applyPreset(p){
   state.filter=p;
   if(p==="All"){ state.selected=new Set(entries.map((_,i)=>i)); }
   else { state.selected=new Set(entries.map((e,i)=>e.presets.includes(p)?i:-1).filter(i=>i>=0)); }
-  if(cwByPreset[p]){ state.cwPreset=p; state.cwOn=true; state.cwCourses=new Set(cwByPreset[p].map((_,i)=>i)); }
+  if(cwByPreset[p]){ state.cwPreset=p; state.cwOn=true; state.cwCourses=new Set(cwByPreset[p]); }
   if(skillsByPreset[p]){ state.skillsPreset=p; }
   render();
 }
@@ -350,14 +350,15 @@ function renderProfile(){
   p.innerHTML=`<span class="pi">◇</span><div><div class="t">Profile &amp; education — always included</div><div class="s">${esc(bits.join(" · "))}</div></div>`;
 }
 function renderCoursework(){
-  const c=document.getElementById("cw"); const courses=(state.cwPreset&&cwByPreset[state.cwPreset])||[];
-  if(!courses.length){ c.style.display="none"; return; } c.style.display="";
-  const top=`<div class="top"><input type="checkbox" id="cwChk" ${state.cwOn?"checked":""}><div class="lab">Relevant coursework <b>auto · ${esc(state.cwPreset)}</b></div><button class="mo" id="cwMo">${state.cwOpen?"Hide options":"More options"}</button></div>`;
-  let chips=""; if(state.cwOpen){ chips='<div class="courses">'+courses.map((name,i)=>`<span class="cc${state.cwCourses.has(i)?" on":""}" data-ci="${i}">${esc(name)}</span>`).join("")+'</div>'; }
+  const c=document.getElementById("cw");
+  const all=cwByPreset["All"]||(state.cwPreset&&cwByPreset[state.cwPreset])||[];
+  if(!all.length){ c.style.display="none"; return; } c.style.display="";
+  const top=`<div class="top"><input type="checkbox" id="cwChk" ${state.cwOn?"checked":""}><div class="lab">Relevant coursework <b>auto · ${esc(state.cwPreset||"All")}</b></div><button class="mo" id="cwMo">${state.cwOpen?"Hide options":"More options"}</button></div>`;
+  let chips=""; if(state.cwOpen){ chips='<div class="courses">'+all.map(name=>`<span class="cc${state.cwCourses.has(name)?" on":""}" data-n="${esc(name)}">${esc(name)}</span>`).join("")+'</div>'; }
   c.innerHTML=top+chips;
   document.getElementById("cwChk").onchange=e=>{ state.cwOn=e.target.checked; renderPreview(); };
   document.getElementById("cwMo").onclick=()=>{ state.cwOpen=!state.cwOpen; renderCoursework(); };
-  c.querySelectorAll(".cc").forEach(ch=>ch.onclick=()=>{ const i=+ch.dataset.ci; state.cwCourses.has(i)?state.cwCourses.delete(i):state.cwCourses.add(i); renderCoursework(); renderPreview(); });
+  c.querySelectorAll(".cc").forEach(ch=>ch.onclick=()=>{ const n=ch.dataset.n; state.cwCourses.has(n)?state.cwCourses.delete(n):state.cwCourses.add(n); renderCoursework(); renderPreview(); });
 }
 function renderList(){
   const L=document.getElementById("list"); L.innerHTML="";
@@ -382,7 +383,8 @@ function entryEl(e,i){
 
 function resumeModel(){
   const picked=entries.map((e,i)=>state.selected.has(i)?e:null).filter(Boolean);
-  const courses=(state.cwOn&&state.cwPreset&&cwByPreset[state.cwPreset])?cwByPreset[state.cwPreset].filter((_,i)=>state.cwCourses.has(i)):[];
+  const cwAll=cwByPreset["All"]||(state.cwPreset&&cwByPreset[state.cwPreset])||[];
+  const courses=state.cwOn? cwAll.filter(n=>state.cwCourses.has(n)) : [];
   const secs=SECTION_DEFS.map(({key,label})=>({label,items:picked.filter(e=>e.type===key)})).filter(s=>s.items.length);
   const skills=(state.skillsPreset&&skillsByPreset[state.skillsPreset])||[];
   return {profile,courses,skills,secs,count:picked.length};
@@ -390,30 +392,45 @@ function resumeModel(){
 function resumeHTML(){
   const R=resumeModel();
   if(!R.count && !R.courses.length) return `<div style="font-family:var(--serif);color:#9aa3ad;font-style:italic;text-align:center;padding:30px">Pick a preset or tick entries to build the resume.</div>`;
-  let h=`<div style="font-family:var(--serif);color:#111;font-size:12.5px;line-height:1.42">`;
-  h+=`<div style="text-align:center;font-size:21px;font-weight:bold;letter-spacing:.02em">${esc(R.profile.name)}</div>`;
-  if(R.profile.contact) h+=`<div style="text-align:center;font-size:11px;color:#333;margin-top:2px">${esc(R.profile.contact)}</div>`;
-  const sec=t=>`<div style="font-size:11.5px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;border-bottom:1.3px solid #111;margin:12px 0 4px">${t}</div>`;
+  let h=`<div style="font-family:var(--serif);color:#111;line-height:1.34">`;
+  h+=`<div style="text-align:center;font-size:1.72em;font-weight:bold;letter-spacing:.02em">${esc(R.profile.name)}</div>`;
+  if(R.profile.contact) h+=`<div style="text-align:center;font-size:.86em;color:#333;margin-top:.15em">${esc(R.profile.contact)}</div>`;
+  const sec=t=>`<div style="font-size:.98em;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;border-bottom:1.2px solid #111;margin:.8em 0 .28em">${t}</div>`;
   if(R.profile.edu){ h+=sec("Education");
-    h+=`<div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:bold">${esc(R.profile.edu.school)}</span><span style="font-weight:bold;white-space:nowrap">${esc(R.profile.edu.date)}</span></div>`;
+    h+=`<div style="display:flex;justify-content:space-between;gap:.6em"><span style="font-weight:bold">${esc(R.profile.edu.school)}</span><span style="font-weight:bold;white-space:nowrap;font-size:.95em">${esc(R.profile.edu.date)}</span></div>`;
     if(R.profile.edu.degree) h+=`<div>${esc(R.profile.edu.degree)}</div>`;
     if(R.courses.length) h+=`<div><b>Relevant Coursework:</b> ${esc(R.courses.join(", "))}</div>`;
   }
   if(R.skills.length){ h+=sec("Skills"); R.skills.forEach(c=>h+=`<div><b>${esc(c.label)}:</b> ${esc(c.items.join(", "))}</div>`); }
   R.secs.forEach(s=>{ h+=sec(s.label);
-    s.items.forEach(e=>{ h+=`<div style="display:flex;justify-content:space-between;gap:8px;margin-top:5px"><span style="font-weight:bold">${esc(e.title)}</span><span style="font-weight:bold;white-space:nowrap">${esc(e.date)}</span></div>`;
-      if(e.bullets.length){ h+=`<ul style="margin:2px 0 0;padding-left:16px">`+e.bullets.map(b=>`<li style="margin:1px 0">${esc(b)}</li>`).join("")+`</ul>`; } });
+    s.items.forEach(e=>{ h+=`<div style="display:flex;justify-content:space-between;gap:.6em;margin-top:.42em"><span style="font-weight:bold">${esc(e.title)}</span><span style="font-weight:bold;white-space:nowrap;font-size:.95em">${esc(e.date)}</span></div>`;
+      if(e.bullets.length){ h+=`<ul style="margin:.12em 0 0;padding-left:1.25em">`+e.bullets.map(b=>`<li style="margin:.08em 0;font-size:.97em;line-height:1.3">${esc(b)}</li>`).join("")+`</ul>`; } });
   });
   return h+`</div>`;
 }
+const measureDiv=document.createElement("div");
+measureDiv.style.cssText="position:absolute;left:-99999px;top:0;width:700px;font-family:var(--serif);line-height:1.34;visibility:hidden";
+document.body.appendChild(measureDiv);
+const FIT={MIN:11,MAX:15,TARGET:930};
+function fitFont(html){
+  const m=measureDiv; m.innerHTML=html; let base=12;
+  for(let k=0;k<3;k++){ m.style.fontSize=base+"px"; const h=m.scrollHeight||1; const ideal=base*FIT.TARGET/h;
+    const next=Math.max(FIT.MIN,Math.min(FIT.MAX,ideal));
+    if(k===2||Math.abs(next-base)<0.1) return {base:Math.round(next*10)/10, ideal, fill:(m.scrollHeight*next/base)/FIT.TARGET};
+    base=next; }
+}
 function renderPreview(){
-  document.getElementById("paper").innerHTML=resumeHTML();
-  const R=resumeModel(); let lines=R.profile.edu?3:0; if(R.courses.length)lines++; lines+=R.skills.length;
-  R.secs.forEach(s=>{ lines++; s.items.forEach(e=>{ lines+=1+e.bullets.length; }); });
-  const cap=46,pct=Math.round(lines/cap*100),any=R.count||R.courses.length,over=pct>100;
-  document.getElementById("fl").style.width=(any?Math.min(100,Math.max(5,pct)):0)+"%";
-  document.getElementById("lb").textContent=any?`≈ ${lines} lines · ${pct}% of one page${over?" · trim to fit":""}`:"empty";
-  document.getElementById("meter").classList.toggle("over",over);
+  const R=resumeModel(), any=R.count||R.courses.length;
+  const paper=document.getElementById("paper"), meter=document.getElementById("meter");
+  const html=resumeHTML();
+  if(!any){ paper.style.fontSize=""; paper.innerHTML=html; document.getElementById("fl").style.width="0%"; document.getElementById("lb").textContent="empty"; meter.classList.remove("over"); return; }
+  const f=fitFont(html)||{base:12,ideal:12,fill:1};
+  paper.style.fontSize=f.base+"px"; paper.innerHTML=html;
+  const pt=(f.base/1.3333).toFixed(1);
+  const tooSmall=f.ideal<FIT.MIN-0.05, roomy=f.base>=FIT.MAX-0.05 && f.fill<0.9;
+  document.getElementById("fl").style.width=Math.min(100,Math.round(f.fill*100))+"%";
+  document.getElementById("lb").textContent=tooSmall?`Body ${pt} pt · too long for one page — trim`:roomy?`Body ${pt} pt · room for more`:`Body ${pt} pt`;
+  meter.classList.toggle("over",tooSmall);
 }
 
 function assembleText(md){
@@ -431,7 +448,7 @@ function download(blob,name){ const a=document.createElement("a"); a.href=URL.cr
 
 function exportPDF(){ const old=document.title; document.title=fileName(); window.addEventListener("afterprint",function h(){document.title=old;window.removeEventListener("afterprint",h);}); window.print(); }
 function exportRich(){
-  const html="<meta charset='utf-8'>"+resumeHTML(), text=assembleText(false);
+  const html="<meta charset='utf-8'><div style=\"font-size:11pt\">"+resumeHTML()+"</div>", text=assembleText(false);
   if(navigator.clipboard&&window.ClipboardItem){
     navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]).then(()=>toast("Rich text copied — paste into Docs or Word"),()=>navigator.clipboard.writeText(text).then(()=>toast("Copied as text")));
   } else navigator.clipboard.writeText(text).then(()=>toast("Copied as text"));
