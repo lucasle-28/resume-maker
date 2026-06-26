@@ -214,6 +214,12 @@ let RAW=[], connected=false;
 let profile={name:"",contact:"",edu:null}, cwByPreset={}, skillsByPreset={}, entries=[], presetList=[];
 const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"", tagFilter:new Set(), tagOpen:false, skillsPreset:null };
 
+function fixMojibake(s){
+  if(s.indexOf("â€")<0 && s.indexOf("Ã")<0 && s.indexOf("Â")<0) return s;
+  const map={"â€”":"—","â€“":"–","â€™":"’","â€˜":"‘","â€œ":"“","â€\u009d":"”","â€¢":"•","Ã—":"×","Â ":" "};
+  Object.keys(map).forEach(k=>{ s=s.split(k).join(map[k]); });
+  return s.split("Â").join("");
+}
 function csvUrlFrom(input){
   input=(input||"").trim(); if(!input) return "";
   if(input.includes("output=csv")||input.includes("tqx=out:csv")) return input;
@@ -264,7 +270,12 @@ function ingest(recs){
       const t=r.title.toLowerCase();
       if(t==="name") profile.name=after[0]||"";
       else if(t==="contact") profile.contact=after.join(" • ");
-      else if(t==="education") profile.edu={school:after[0]||"",degree:after[1]||"",date:after[2]||""};
+      else if(t==="education"){
+        let degree=after[1]||"", gpa="";
+        const g=degree.match(/\s*[—–-]*\s*GPA[:\s]*([0-9.]+\s*\/\s*[0-9.]+|[0-9.]+)/i);
+        if(g){ gpa="GPA: "+g[1].replace(/\s*\/\s*/,"/"); degree=degree.slice(0,g.index).replace(/[\s—–-]+$/,"").trim(); }
+        profile.edu={school:after[0]||"",degree,gpa,date:after[2]||""};
+      }
     } else if(ty==="coursework"){
       const name=r.title; if(name) r.presets.forEach(p=>{ cwByPreset[p]=cwByPreset[p]||[]; if(!cwByPreset[p].includes(name)) cwByPreset[p].push(name); });
     } else if(ty==="skills"){
@@ -290,7 +301,8 @@ async function loadSheet(url,quiet){
   try{
     setSource("idle","syncing…");
     const res=await fetch(csv,{redirect:"follow"}); if(!res.ok) throw new Error("HTTP "+res.status+" — check sharing/publish");
-    ingest(rowsToRecords(parseCSV(await res.text())));
+    const text=fixMojibake(new TextDecoder("utf-8").decode(await res.arrayBuffer()));
+    ingest(rowsToRecords(parseCSV(text)));
     if(!entries.length && !profile.name) throw new Error("no rows found — check Type column");
     connected=true; setSource("live");
     buildPresets();
@@ -398,7 +410,7 @@ function resumeHTML(){
   const sec=t=>`<div style="font-size:.98em;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;border-bottom:1.2px solid #111;margin:.8em 0 .28em">${t}</div>`;
   if(R.profile.edu){ h+=sec("Education");
     h+=`<div style="display:flex;justify-content:space-between;gap:.6em"><span style="font-weight:bold">${esc(R.profile.edu.school)}</span><span style="font-weight:bold;white-space:nowrap;font-size:.95em">${esc(R.profile.edu.date)}</span></div>`;
-    if(R.profile.edu.degree) h+=`<div>${esc(R.profile.edu.degree)}</div>`;
+    if(R.profile.edu.degree||R.profile.edu.gpa) h+=`<div style="display:flex;justify-content:space-between;gap:.6em"><span>${esc(R.profile.edu.degree)}</span>${R.profile.edu.gpa?`<span style="font-weight:bold;white-space:nowrap;font-size:.95em">${esc(R.profile.edu.gpa)}</span>`:""}</div>`;
     if(R.courses.length) h+=`<div><b>Relevant Coursework:</b> ${esc(R.courses.join(", "))}</div>`;
   }
   if(R.skills.length){ h+=sec("Skills"); R.skills.forEach(c=>h+=`<div><b>${esc(c.label)}:</b> ${esc(c.items.join(", "))}</div>`); }
@@ -436,7 +448,7 @@ function renderPreview(){
 function assembleText(md){
   const R=resumeModel(); const L=[];
   L.push(md?`# ${R.profile.name}`:R.profile.name.toUpperCase()); if(R.profile.contact)L.push(R.profile.contact); L.push("");
-  if(R.profile.edu){ L.push(md?"### Education":"EDUCATION"); L.push((R.profile.edu.school+(R.profile.edu.date?"  —  "+R.profile.edu.date:"")).trim()); if(R.profile.edu.degree)L.push(R.profile.edu.degree); if(R.courses.length)L.push("Relevant Coursework: "+R.courses.join(", ")); L.push(""); }
+  if(R.profile.edu){ L.push(md?"### Education":"EDUCATION"); L.push((R.profile.edu.school+(R.profile.edu.date?"  —  "+R.profile.edu.date:"")).trim()); if(R.profile.edu.degree||R.profile.edu.gpa)L.push((R.profile.edu.degree+(R.profile.edu.gpa?"  —  "+R.profile.edu.gpa:"")).trim()); if(R.courses.length)L.push("Relevant Coursework: "+R.courses.join(", ")); L.push(""); }
   if(R.skills.length){ L.push(md?"### Skills":"SKILLS"); R.skills.forEach(c=>L.push((md?`**${c.label}:** `:`${c.label}: `)+c.items.join(", "))); L.push(""); }
   R.secs.forEach(s=>{ L.push(md?`### ${s.label}`:s.label.toUpperCase());
     s.items.forEach(e=>{ L.push((md?`**${e.title}**`:e.title)+(e.date?"  —  "+e.date:"")); e.bullets.forEach(b=>L.push((md?"- ":"• ")+b)); }); L.push(""); });
@@ -466,7 +478,7 @@ async function exportDocx(){
     const line=(t,o)=>new D.Paragraph(Object.assign({children:[new D.TextRun({text:t,size:22})]},o||{}));
     kids.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,children:[new D.TextRun({text:R.profile.name,bold:true,size:34})]}));
     if(R.profile.contact) kids.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,children:[new D.TextRun({text:R.profile.contact,size:18})]}));
-    if(R.profile.edu){ kids.push(sec("Education")); kids.push(tabRow(R.profile.edu.school,R.profile.edu.date,true)); if(R.profile.edu.degree)kids.push(line(R.profile.edu.degree)); if(R.courses.length)kids.push(new D.Paragraph({children:[new D.TextRun({text:"Relevant Coursework: ",bold:true,size:22}),new D.TextRun({text:R.courses.join(", "),size:22})]})); }
+    if(R.profile.edu){ kids.push(sec("Education")); kids.push(tabRow(R.profile.edu.school,R.profile.edu.date,true)); if(R.profile.edu.degree||R.profile.edu.gpa)kids.push(new D.Paragraph({tabStops:[{type:D.TabStopType.RIGHT,position:RIGHT}],children:[new D.TextRun({text:R.profile.edu.degree,size:22}),new D.TextRun({text:"\t"+(R.profile.edu.gpa||""),bold:true,size:22})]})); if(R.courses.length)kids.push(new D.Paragraph({children:[new D.TextRun({text:"Relevant Coursework: ",bold:true,size:22}),new D.TextRun({text:R.courses.join(", "),size:22})]})); }
     if(R.skills.length){ kids.push(sec("Skills")); R.skills.forEach(c=>kids.push(new D.Paragraph({children:[new D.TextRun({text:c.label+": ",bold:true,size:22}),new D.TextRun({text:c.items.join(", "),size:22})]}))); }
     R.secs.forEach(s=>{ kids.push(sec(s.label)); s.items.forEach(e=>{ kids.push(tabRow(e.title,e.date,true)); e.bullets.forEach(b=>kids.push(new D.Paragraph({bullet:{level:0},children:[new D.TextRun({text:b,size:22})]}))); }); });
     const doc=new D.Document({sections:[{properties:{page:{size:{width:12240,height:15840},margin:{top:864,bottom:864,left:864,right:864}}},children:kids}]});
