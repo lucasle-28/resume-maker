@@ -49,7 +49,7 @@ One tab, read top-to-bottom. Sections come from **divider rows**, not a column �
 - `Education` → Bullet 1 = school, Bullet 2 = degree line (GPA inline), Date = grad date
 - `Skill` → one row per line (Bullet 1 = `Languages: …`); add as many as you want
 
-**COURSEWORK section** — one row per preset: Presets = the preset, Bullet 1 = comma-separated courses.
+**COURSEWORK section** — one row per course: Title = the course name, Presets = which presets it belongs to. The app collects the courses tagged to the active preset into the single "Relevant Coursework" line; More options lets you add/drop individual courses. (All shows the deduped union of every course.)
 
 ## Using it
 - Click a **preset** → filters to its entries and auto-selects them (plus that preset's coursework). **All** shows everything and keeps your selection, so you can add an off-preset entry.

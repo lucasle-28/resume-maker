@@ -40,7 +40,7 @@ header{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;border
 .menu button .k{font-family:var(--font-mono);font-size:10px;color:var(--faint)}
 .menu .sep{height:1px;background:var(--line);margin:5px 4px}
 
-.controls{display:flex;align-items:center;gap:10px;padding:10px 20px;background:#26456c;flex-wrap:wrap}
+.controls{position:relative;display:flex;align-items:center;gap:10px;padding:10px 20px;background:#26456c;flex-wrap:wrap}
 .controls .search{flex:1;min-width:180px;display:flex;align-items:center;background:#fff;border-radius:7px;padding:0 10px}
 .controls .search input{border:0;outline:0;padding:8px 6px;width:100%;font-family:var(--font-ui);font-size:13px;background:transparent}
 .controls .search span{color:var(--faint);font-family:var(--font-mono);font-size:12px}
@@ -48,6 +48,13 @@ header{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;border
 .preset{background:rgba(255,255,255,.1);color:#dce6f2;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 11px;font-size:12px;font-family:var(--font-mono)}
 .preset:hover{background:rgba(255,255,255,.2)}
 .preset.on{background:var(--copper);border-color:var(--copper);color:#fff}
+.tagbar{position:absolute;top:100%;left:20px;right:20px;background:#fff;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;box-shadow:0 14px 28px rgba(20,32,46,.18);padding:10px 12px;display:none;flex-wrap:wrap;gap:6px;align-items:center;z-index:28}
+.tagbar.open{display:flex}
+.tagbar .tt{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-right:2px}
+.tagbar .tgc{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--soft);font-family:var(--font-mono)}
+.tagbar .tgc:hover{border-color:var(--navy2);color:var(--ink)}
+.tagbar .tgc.on{background:var(--copper);color:#fff;border-color:var(--copper)}
+.tagbar .clr{margin-left:auto;border:0;background:none;color:var(--copper-deep);font-size:11px;font-family:var(--font-mono);cursor:pointer}
 
 .workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
 .left{padding:16px 18px 60px;min-width:0}
@@ -118,11 +125,13 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 @media print{
-  @page{size:Letter;margin:.6in}
-  body{background:#fff}
-  body *{visibility:hidden!important}
-  #paper,#paper *{visibility:visible!important}
-  #paper{position:absolute;left:0;top:0;width:100%;max-height:none;overflow:visible;border:0;box-shadow:none;padding:0;border-radius:0}
+  @page{size:Letter;margin:.55in}
+  html,body{background:#fff;margin:0;padding:0}
+  header,.controls,#tagbar,#left,.foot,.colh,.toast{display:none!important}
+  .workspace{display:block!important}
+  .right{position:static!important;padding:0!important;display:block!important}
+  .paperwrap{max-height:none!important;overflow:visible!important;border:0!important;box-shadow:none!important;padding:0!important;border-radius:0!important}
+  #paper{width:100%!important}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -151,6 +160,7 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
   <div class="controls">
     <label class="search"><span>⌕</span><input id="q" type="search" placeholder="Search entries…" autocomplete="off"></label>
     <div class="presets" id="presets"></div>
+    <div class="tagbar" id="tagbar"></div>
   </div>
 </header>
 
@@ -202,7 +212,7 @@ const store = { get(k){ try{return localStorage.getItem(k);}catch(e){return null
 
 let RAW=[], connected=false;
 let profile={name:"",contact:"",edu:null,skills:[]}, cwByPreset={}, entries=[], presetList=[];
-const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"" };
+const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"", tagFilter:new Set(), tagOpen:false };
 
 function csvUrlFrom(input){
   input=(input||"").trim(); if(!input) return "";
@@ -254,12 +264,14 @@ function ingest(recs){
       else if(t==="education") profile.edu={school:r.bullets[0]||"",degree:r.bullets[1]||"",date:r.date};
       else if(t==="skill"||t==="skills") r.bullets.forEach(b=>profile.skills.push(b));
     } else if(ty==="coursework"){
-      const courses=r.bullets.join(", ").split(",").map(c=>c.trim()).filter(Boolean);
-      r.presets.forEach(p=>{ cwByPreset[p]=courses; });
+      const name=r.title; if(name) r.presets.forEach(p=>{ cwByPreset[p]=cwByPreset[p]||[]; if(!cwByPreset[p].includes(name)) cwByPreset[p].push(name); });
     } else { entries.push(r); }
   });
   const found={}; entries.forEach(e=>e.presets.forEach(p=>found[p]=1)); Object.keys(cwByPreset).forEach(p=>found[p]=1);
-  presetList=PRESET_ORDER.filter(p=>found[p]).concat(Object.keys(found).filter(p=>!PRESET_ORDER.includes(p))).concat(["All"]);
+  const union=[]; PRESET_ORDER.forEach(p=>{ (cwByPreset[p]||[]).forEach(c=>{ if(!union.includes(c)) union.push(c); }); });
+  Object.keys(cwByPreset).forEach(p=>{ if(!PRESET_ORDER.includes(p)) cwByPreset[p].forEach(c=>{ if(!union.includes(c)) union.push(c); }); });
+  if(union.length) cwByPreset["All"]=union;
+  presetList=PRESET_ORDER.filter(p=>found[p]).concat(Object.keys(found).filter(p=>!PRESET_ORDER.includes(p)&&p!=="All")).concat(["All"]);
 }
 
 async function loadSheet(url,quiet){
@@ -290,15 +302,25 @@ function buildPresets(){
 }
 function applyPreset(p){
   state.filter=p;
-  if(p!=="All"){
-    state.selected=new Set(entries.map((e,i)=>e.presets.includes(p)?i:-1).filter(i=>i>=0));
-    if(cwByPreset[p]){ state.cwPreset=p; state.cwOn=true; state.cwCourses=new Set(cwByPreset[p].map((_,i)=>i)); }
-  }
+  if(p==="All"){ state.selected=new Set(entries.map((_,i)=>i)); }
+  else { state.selected=new Set(entries.map((e,i)=>e.presets.includes(p)?i:-1).filter(i=>i>=0)); }
+  if(cwByPreset[p]){ state.cwPreset=p; state.cwOn=true; state.cwCourses=new Set(cwByPreset[p].map((_,i)=>i)); }
   render();
 }
 
 function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-function visibleEntries(){ return entries.map((e,i)=>({e,i})).filter(({e})=> (state.filter==="All"||!state.filter||e.presets.includes(state.filter)) && (!state.q||(e.title+" "+e.tags.join(" ")+" "+e.bullets.join(" ")).toLowerCase().includes(state.q)) ); }
+function visibleEntries(){ return entries.map((e,i)=>({e,i})).filter(({e})=> (state.filter==="All"||!state.filter||e.presets.includes(state.filter)) && (!state.tagFilter.size||e.tags.some(t=>state.tagFilter.has(t))) && (!state.q||(e.title+" "+e.tags.join(" ")+" "+e.bullets.join(" ")).toLowerCase().includes(state.q)) ); }
+function tagUniverse(){ const seen=[]; entries.forEach(e=>e.tags.forEach(t=>{ if(!seen.includes(t)) seen.push(t); })); return seen; }
+function renderTagbar(){
+  const w=document.getElementById("tagbar"); w.classList.toggle("open",state.tagOpen);
+  const tags=tagUniverse();
+  let h='<span class="tt">Filter by tag</span>'+tags.map(t=>`<button class="tgc${state.tagFilter.has(t)?" on":""}" data-t="${esc(t)}">${esc(t)}</button>`).join("");
+  h+=`<button class="clr">${state.tagFilter.size?"Clear tags":"Close"}</button>`;
+  w.innerHTML=h;
+  w.querySelectorAll(".tgc,.clr").forEach(b=>b.addEventListener("mousedown",e=>e.preventDefault()));
+  w.querySelectorAll(".tgc").forEach(b=>b.onclick=()=>{ const t=b.dataset.t; state.tagFilter.has(t)?state.tagFilter.delete(t):state.tagFilter.add(t); renderTagbar(); renderList(); });
+  w.querySelector(".clr").onclick=()=>{ if(state.tagFilter.size){ state.tagFilter.clear(); renderList(); } else { state.tagOpen=false; } renderTagbar(); };
+}
 
 function render(){
   const ws=document.getElementById("workspace");
@@ -309,7 +331,7 @@ function render(){
   }
   if(!document.getElementById("left")){ location.reload(); return; }
   document.querySelectorAll(".preset").forEach(b=>b.classList.toggle("on",b.textContent===state.filter));
-  renderProfile(); renderCoursework(); renderList(); renderPreview();
+  renderTagbar(); renderProfile(); renderCoursework(); renderList(); renderPreview();
 }
 function renderProfile(){
   const p=document.getElementById("profban");
@@ -356,8 +378,8 @@ function resumeModel(){
 function resumeHTML(){
   const R=resumeModel();
   if(!R.count && !R.courses.length) return `<div style="font-family:var(--serif);color:#9aa3ad;font-style:italic;text-align:center;padding:30px">Pick a preset or tick entries to build the resume.</div>`;
-  let h=`<div style="font-family:var(--serif);color:#111;font-size:12px;line-height:1.42">`;
-  h+=`<div style="text-align:center;font-size:20px;font-weight:bold;letter-spacing:.02em">${esc(R.profile.name)}</div>`;
+  let h=`<div style="font-family:var(--serif);color:#111;font-size:12.5px;line-height:1.42">`;
+  h+=`<div style="text-align:center;font-size:21px;font-weight:bold;letter-spacing:.02em">${esc(R.profile.name)}</div>`;
   if(R.profile.contact) h+=`<div style="text-align:center;font-size:11px;color:#333;margin-top:2px">${esc(R.profile.contact)}</div>`;
   const sec=t=>`<div style="font-size:11.5px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;border-bottom:1.3px solid #111;margin:12px 0 4px">${t}</div>`;
   if(R.profile.edu){ h+=sec("Education");
@@ -376,10 +398,10 @@ function renderPreview(){
   document.getElementById("paper").innerHTML=resumeHTML();
   const R=resumeModel(); let lines=R.profile.edu?3:0; if(R.courses.length)lines++; lines+=R.profile.skills.length;
   R.secs.forEach(s=>{ lines++; s.items.forEach(e=>{ lines+=1+e.bullets.length; }); });
-  const cap=46,pct=Math.min(100,Math.round(lines/cap*100)),any=R.count||R.courses.length;
-  document.getElementById("fl").style.width=(any?Math.max(5,pct):0)+"%";
-  document.getElementById("lb").textContent=any?`≈ ${lines} lines · ${pct}% of one page`:"empty";
-  document.getElementById("meter").classList.toggle("over",lines>cap);
+  const cap=46,pct=Math.round(lines/cap*100),any=R.count||R.courses.length,over=pct>100;
+  document.getElementById("fl").style.width=(any?Math.min(100,Math.max(5,pct)):0)+"%";
+  document.getElementById("lb").textContent=any?`≈ ${lines} lines · ${pct}% of one page${over?" · trim to fit":""}`:"empty";
+  document.getElementById("meter").classList.toggle("over",over);
 }
 
 function assembleText(md){
@@ -423,10 +445,12 @@ async function exportDocx(){
   }catch(e){ toast("Word export failed — "+e.message); }
 }
 
-document.getElementById("q").oninput=e=>{ state.q=e.target.value.toLowerCase(); renderList(); };
+const qEl=document.getElementById("q");
+qEl.oninput=e=>{ state.q=e.target.value.toLowerCase(); renderList(); };
+qEl.onfocus=()=>{ state.tagOpen=true; renderTagbar(); };
 const menu=document.getElementById("exportMenu");
 document.getElementById("exportBtn").onclick=e=>{ e.stopPropagation(); menu.classList.toggle("open"); };
-document.addEventListener("click",()=>menu.classList.remove("open"));
+document.addEventListener("click",e=>{ menu.classList.remove("open"); if(state.tagOpen && !e.target.closest(".controls")){ state.tagOpen=false; renderTagbar(); } });
 menu.onclick=e=>{ const b=e.target.closest("button"); if(!b) return; menu.classList.remove("open");
   const a=b.dataset.act; if(a==="pdf")exportPDF(); else if(a==="docx")exportDocx(); else if(a==="rich")exportRich();
   else if(a==="md")navigator.clipboard.writeText(assembleText(true)).then(()=>toast("Markdown copied"));
