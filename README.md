@@ -2,7 +2,7 @@
 
 A static, single-file web app that assembles a tailored, print-ready resume from a master bank you keep in one Google Sheet. Pick a target (FPGA / ASIC, Embedded, DSP, …) and it auto-builds the resume; tweak, then export to PDF, .docx, or copy. **All content lives in the Sheet — you never edit the code.**
 
-## Files
+## File
 - `index.html` — the whole app (no build step, no embedded data)
 - `bank-seed.csv` — import once into a fresh Google Sheet to get the layout + your current content
 - `README.md` — this file
