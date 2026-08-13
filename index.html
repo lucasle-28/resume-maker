@@ -116,7 +116,11 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
 .dlg h3{margin:0 0 4px;font-size:16px}
 .dlg p{color:var(--soft);font-size:13px;margin:0 0 14px}
 .dlg input[type=url]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-family:var(--font-mono);font-size:12px}
+.dlg textarea{width:100%;min-height:132px;padding:10px 11px;border:1px solid var(--line);border-radius:7px;font-family:var(--font-mono);font-size:11.5px;line-height:1.5;resize:vertical}
 .dlg ol{color:var(--soft);font-size:12.5px;padding-left:18px;margin:14px 0}
+.dlg .hint{font-family:var(--font-mono);font-size:11px;color:var(--faint);line-height:1.7;margin-top:10px;white-space:pre-wrap}
+.dlg .row.split{justify-content:space-between}
+.tailored{font-family:var(--font-mono);font-size:10px;color:var(--copper-deep);border:1px solid var(--copper);border-radius:4px;padding:1px 6px;margin-left:6px}
 .dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .dlg code{font-family:var(--font-mono);font-size:11px;background:var(--line2);padding:1px 5px;border-radius:4px}
 .status{font-size:12px;margin-top:8px;font-family:var(--font-mono)}
@@ -144,6 +148,7 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
       <span class="dot" id="srcDot"></span><span id="srcLabel">…</span>
       <button id="refreshBtn" title="Re-pull from the sheet">Refresh</button>
       <button id="cfgBtn">Source</button>
+      <button id="tailorBtn" title="Paste a build code to assemble a tailored resume">Tailor</button>
       <button id="exportBtn">Export ▾</button>
       <div class="menu" id="exportMenu">
         <button data-act="pdf">Save as PDF<span class="k">print</span></button>
@@ -199,6 +204,23 @@ dialog::backdrop{background:rgba(20,32,46,.45)}
     </div>
   </div>
 </dialog>
+<dialog id="tlr">
+  <div class="dlg">
+    <h3>Tailor to a job</h3>
+    <p>Copy the bank digest, hand it to an assistant along with the job description, and paste the build code it writes back.</p>
+    <textarea id="tlrCode" spellcheck="false" placeholder="RB1&#10;label: WD SoC Intern&#10;preset: FPGA / ASIC&#10;courses: digital-logic-design, circuits&#10;items: syracuse, fft@12, spiking, custom"></textarea>
+    <div class="status" id="tlrStatus"></div>
+    <div class="hint" id="tlrHint"></div>
+    <div class="row split">
+      <button class="btn ghost" id="tlrDigest">Copy bank digest</button>
+      <span>
+        <button class="btn ghost" id="tlrLink">Copy link with code</button>
+        <button class="btn ghost" id="tlrClose">Close</button>
+        <button class="btn" id="tlrApply">Apply code</button>
+      </span>
+    </div>
+  </div>
+</dialog>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -212,7 +234,8 @@ const store = { get(k){ try{return localStorage.getItem(k);}catch(e){return null
 
 let RAW=[], connected=false;
 let profile={name:"",contact:"",edu:null}, cwByPreset={}, skillsByPreset={}, entries=[], presetList=[];
-const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"", tagFilter:new Set(), tagOpen:false, skillsPreset:null };
+const state={ filter:null, selected:new Set(), cwPreset:null, cwCourses:new Set(), cwOn:true, cwOpen:false, q:"", tagFilter:new Set(), tagOpen:false, skillsPreset:null,
+  order:[], cwOrdered:false, bulletPick:{}, skillsCustom:null, label:null };
 
 function fixMojibake(s){
   if(s.indexOf("â€")<0 && s.indexOf("Ã")<0 && s.indexOf("Â")<0) return s;
@@ -323,7 +346,7 @@ function buildPresets(){
     b.onclick=()=>applyPreset(p); w.appendChild(b); });
 }
 function applyPreset(p){
-  state.filter=p;
+  state.filter=p; state.order=[]; state.cwOrdered=false; state.bulletPick={}; state.skillsCustom=null; state.label=null;
   if(p==="All"){ state.selected=new Set(entries.map((_,i)=>i)); }
   else { state.selected=new Set(entries.map((e,i)=>e.presets.includes(p)?i:-1).filter(i=>i>=0)); }
   if(cwByPreset[p]){ state.cwPreset=p; state.cwOn=true; state.cwCourses=new Set(cwByPreset[p]); }
@@ -359,7 +382,8 @@ function render(){
 function renderProfile(){
   const p=document.getElementById("profban");
   const bits=[profile.name||"—"]; if(profile.edu&&profile.edu.school) bits.push(profile.edu.school.split(",")[0]);
-  p.innerHTML=`<span class="pi">◇</span><div><div class="t">Profile &amp; education — always included</div><div class="s">${esc(bits.join(" · "))}</div></div>`;
+  const tag=state.label?`<span class="tailored">tailored · ${esc(state.label)}</span>`:"";
+  p.innerHTML=`<span class="pi">◇</span><div><div class="t">Profile &amp; education — always included${tag}</div><div class="s">${esc(bits.join(" · "))}</div></div>`;
 }
 function renderCoursework(){
   const c=document.getElementById("cw");
@@ -393,12 +417,21 @@ function entryEl(e,i){
   return d;
 }
 
+function pickedEntries(){
+  const pos=new Map(state.order.map((idx,k)=>[idx,k]));
+  const idx=[...state.selected].filter(i=>entries[i]);
+  idx.sort((a,b)=>(pos.has(a)?pos.get(a):1e6+a)-(pos.has(b)?pos.get(b):1e6+b));
+  return idx.map(i=>{ const e=entries[i], pick=state.bulletPick[i];
+    if(!pick||!pick.length) return e;
+    const bullets=pick.map(n=>e.bullets[n]).filter(Boolean);
+    return Object.assign({},e,{bullets:bullets.length?bullets:e.bullets}); });
+}
 function resumeModel(){
-  const picked=entries.map((e,i)=>state.selected.has(i)?e:null).filter(Boolean);
+  const picked=pickedEntries();
   const cwAll=cwByPreset["All"]||(state.cwPreset&&cwByPreset[state.cwPreset])||[];
-  const courses=state.cwOn? cwAll.filter(n=>state.cwCourses.has(n)) : [];
+  const courses=!state.cwOn?[]:state.cwOrdered?[...state.cwCourses].filter(n=>cwAll.includes(n)):cwAll.filter(n=>state.cwCourses.has(n));
   const secs=SECTION_DEFS.map(({key,label})=>({label,items:picked.filter(e=>e.type===key)})).filter(s=>s.items.length);
-  const skills=(state.skillsPreset&&skillsByPreset[state.skillsPreset])||[];
+  const skills=state.skillsCustom||(state.skillsPreset&&skillsByPreset[state.skillsPreset])||[];
   return {profile,courses,skills,secs,count:picked.length};
 }
 function resumeHTML(){
@@ -454,7 +487,7 @@ function assembleText(md){
     s.items.forEach(e=>{ L.push((md?`**${e.title}**`:e.title)+(e.date?"  —  "+e.date:"")); e.bullets.forEach(b=>L.push((md?"- ":"• ")+b)); }); L.push(""); });
   return L.join("\n").trim();
 }
-function fileName(){ return ("Lucas-Le-Resume-"+(state.cwPreset||state.filter||"All")).replace(/[^\w-]+/g,"-").replace(/-+/g,"-"); }
+function fileName(){ return ("Lucas-Le-Resume-"+(state.label||state.cwPreset||state.filter||"All")).replace(/[^\w-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,""); }
 function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
 function download(blob,name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
 
@@ -486,6 +519,152 @@ async function exportDocx(){
   }catch(e){ toast("Word export failed — "+e.message); }
 }
 
+/* ── Build codes ─────────────────────────────────────────────────────────
+   A build code is plain text an assistant can write by hand:
+     RB1
+     label: WD SoC Intern
+     preset: FPGA / ASIC
+     skills: VHDL, SystemVerilog, C | Vivado, Vitis HLS | ZCU102, DE1-SoC
+     courses: digital-logic-design, circuits
+     items: syracuse, fft@12, spiking, custom
+   `items` sets both which entries print and the order they print in;
+   `id@134` keeps only bullets 1, 3 and 4 of that entry.            */
+const STOP=new Set(["the","and","for","with","from","dept","based","real","time","university"]);
+function slug(s){ return (s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
+function keyWords(s){ return slug(s).split("-").filter(w=>w.length>2&&!STOP.has(w)); }
+function entryIds(){
+  const ws=entries.map(e=>[...new Set(keyWords(e.title))]);
+  const freq={}; ws.forEach(w=>w.forEach(x=>freq[x]=(freq[x]||0)+1));
+  const taken=new Set();
+  return ws.map((w,i)=>{
+    const ranked=w.map((x,k)=>({x,k})).sort((a,b)=>(freq[a.x]-freq[b.x])||(a.k-b.k));
+    for(const {x} of ranked) if(freq[x]===1&&!taken.has(x)){ taken.add(x); return x; }
+    for(let n=2;n<=Math.max(2,w.length);n++){
+      const id=ranked.slice(0,n).sort((a,b)=>a.k-b.k).map(o=>o.x).join("-");
+      if(id&&!taken.has(id)&&!ws.some((o,j)=>j!==i&&o.join("-")===id)){ taken.add(id); return id; }
+    }
+    const id=(w.join("-")||"entry")+"-"+(i+1); taken.add(id); return id;
+  });
+}
+function matchEntry(tok,ids){
+  const t=slug(tok); if(!t) return -1;
+  const exact=[],pre=[],sub=[];
+  entries.forEach((e,i)=>{
+    const id=ids[i], full=slug(e.title);
+    if(id===t||full===t) exact.push(i);
+    else if(id.startsWith(t)||full.startsWith(t)) pre.push(i);
+    else if(full.includes(t)||keyWords(tok).every(w=>full.includes(w))||e.tags.some(x=>slug(x)===t)) sub.push(i);
+  });
+  const hit=exact.length?exact:pre.length?pre:sub;
+  return hit.length?hit[0]:-1;
+}
+function parseCode(txt){
+  const out={items:[],courses:null,skills:null,preset:null,label:null,warn:[]};
+  const body=String(txt||"").trim().replace(/^RB1\b[:\s]*/i,"");
+  body.split(/[\n;]+/).map(x=>x.trim()).filter(Boolean).forEach(f=>{
+    const m=f.match(/^([a-z]+)\s*[:=]\s*(.*)$/i);
+    if(!m){ out.warn.push("ignored line: "+f.slice(0,36)); return; }
+    const k=m[1].toLowerCase(), v=m[2].trim(); if(!v) return;
+    const list=()=>v.split(",").map(x=>x.trim()).filter(Boolean);
+    if(k==="items"||k==="picks"||k==="entries") out.items=list();
+    else if(k==="courses"||k==="coursework") out.courses=list();
+    else if(k==="skills") out.skills=v.split("|").map(x=>x.trim());
+    else if(k==="preset") out.preset=v;
+    else if(k==="label"||k==="name") out.label=v;
+    else if(k!=="note") out.warn.push("unknown key: "+k);
+  });
+  return out;
+}
+function applyCode(txt){
+  if(!entries.length) return {ok:false,msg:"Connect a sheet first — there's nothing to assemble."};
+  const c=parseCode(txt), ids=entryIds(), notes=c.warn.slice(), miss=[];
+  if(!c.items.length && !c.courses && !c.skills && !c.preset) return {ok:false,msg:"No usable lines. A code needs at least an items: line."};
+
+  if(c.preset){
+    if(skillsByPreset[c.preset]||cwByPreset[c.preset]){ state.skillsPreset=c.preset; state.cwPreset=c.preset; }
+    else notes.push("no preset named "+c.preset);
+  }
+  state.filter="All"; state.q=""; document.getElementById("q").value=""; state.tagFilter.clear();
+
+  if(c.items.length){
+    const sel=new Set(), order=[], bull={};
+    c.items.forEach(tok=>{
+      const m=tok.match(/^(.+?)\s*@\s*([\d,\s-]+)$/);
+      const name=m?m[1]:tok;
+      const pick=m?m[2].replace(/\D/g,"").split("").map(n=>parseInt(n,10)-1).filter(n=>n>=0):null;
+      const i=matchEntry(name,ids);
+      if(i<0){ miss.push(name.trim()); return; }
+      if(!sel.has(i)){ sel.add(i); order.push(i); }
+      if(pick&&pick.length) bull[i]=pick;
+    });
+    state.selected=sel; state.order=order; state.bulletPick=bull;
+  }
+
+  const cwAll=cwByPreset["All"]||[];
+  if(c.courses){
+    const set=new Set(), cmiss=[];
+    c.courses.forEach(t=>{ const s=slug(t);
+      const hit=cwAll.find(n=>slug(n)===s)||cwAll.find(n=>slug(n).startsWith(s))||cwAll.find(n=>slug(n).includes(s));
+      hit?set.add(hit):cmiss.push(t); });
+    state.cwCourses=set; state.cwOrdered=true; state.cwOn=set.size>0;
+    if(cmiss.length) notes.push("no course matched: "+cmiss.join(", "));
+  } else if(c.preset&&cwByPreset[c.preset]){ state.cwCourses=new Set(cwByPreset[c.preset]); state.cwOrdered=false; state.cwOn=true; }
+
+  if(c.skills){
+    if(c.skills.length===1&&skillsByPreset[c.skills[0]]){ state.skillsCustom=null; state.skillsPreset=c.skills[0]; }
+    else{
+      const labs=["Languages","Tools","Hardware"];
+      state.skillsCustom=c.skills.map((v,i)=>({label:labs[i]||"More",items:v.split(",").map(x=>x.trim()).filter(Boolean)})).filter(x=>x.items.length);
+      if(!state.skillsCustom.length) state.skillsCustom=null;
+    }
+  }
+  state.label=c.label||null;
+  store.set("rb_code",txt.trim());
+  render();
+  const parts=[state.selected.size+" entries",state.cwCourses.size+" courses"];
+  if(miss.length) parts.push("no match: "+miss.join(", "));
+  notes.forEach(n=>parts.push(n));
+  return {ok:true, clean:!miss.length&&!notes.length, msg:parts.join(" · ")};
+}
+function bankDigest(){
+  const ids=entryIds(), L=[];
+  L.push("RESUME BANK DIGEST · "+new Date().toISOString().slice(0,10));
+  L.push("Paste this with a job description and ask for an RB1 build code.");
+  L.push("");
+  L.push("PROFILE: "+[profile.name,profile.edu&&profile.edu.school,profile.edu&&profile.edu.degree,profile.edu&&profile.edu.gpa,profile.edu&&profile.edu.date].filter(Boolean).join(" | "));
+  L.push("PRESETS: "+presetList.join(", "));
+  L.push("");
+  L.push("SKILLS BY PRESET");
+  Object.keys(skillsByPreset).forEach(p=>{ if(p==="All") return;
+    L.push("  "+p+" — "+skillsByPreset[p].map(c=>c.label+": "+c.items.join(", ")).join(" | ")); });
+  L.push("");
+  L.push("COURSES (id | name | presets)");
+  (cwByPreset["All"]||[]).forEach(n=>{
+    const ps=Object.keys(cwByPreset).filter(p=>p!=="All"&&cwByPreset[p].includes(n));
+    L.push("  "+slug(n)+" | "+n+" | "+ps.join(", ")); });
+  SECTION_DEFS.forEach(({key,label})=>{
+    const rows=entries.map((e,i)=>({e,i})).filter(x=>x.e.type===key); if(!rows.length) return;
+    L.push(""); L.push(label.toUpperCase());
+    rows.forEach(({e,i})=>{
+      L.push("  ["+ids[i]+"] "+e.title+(e.date?" — "+e.date:""));
+      L.push("    presets: "+(e.presets.join(", ")||"—")+(e.tags.length?"    tags: "+e.tags.join(", "):""));
+      e.bullets.forEach((b,k)=>L.push("    "+(k+1)+". "+b));
+    });
+  });
+  L.push("");
+  L.push("BUILD CODE FORMAT — reply with exactly this shape, nothing else:");
+  L.push("RB1");
+  L.push("label: <short name, used for the PDF filename>");
+  L.push("preset: <one preset from the list above — sets the skills line>");
+  L.push("skills: <languages> | <tools> | <hardware>   (optional; replaces the preset's skills line — only use wording already true of me)");
+  L.push("courses: <course ids, comma-separated, in print order>");
+  L.push("items: <entry ids, comma-separated, in print order; write id@134 to keep only bullets 1, 3 and 4>");
+  L.push("");
+  L.push("Rules: only ids listed above; one page fits roughly 6-7 entries with 2-3 bullets each;");
+  L.push("order items by relevance to the job, strongest first within each section.");
+  return L.join("\n");
+}
+
 const qEl=document.getElementById("q");
 qEl.oninput=e=>{ state.q=e.target.value.toLowerCase(); renderList(); };
 qEl.onfocus=()=>{ state.tagOpen=true; renderTagbar(); };
@@ -498,6 +677,33 @@ menu.onclick=e=>{ const b=e.target.closest("button"); if(!b) return; menu.classL
   else if(a==="txt")navigator.clipboard.writeText(assembleText(false)).then(()=>toast("Text copied"));
   else if(a==="link")exportLink(); };
 
+const tlr=document.getElementById("tlr");
+const tlrCode=document.getElementById("tlrCode"), tlrStatus=document.getElementById("tlrStatus"), tlrHint=document.getElementById("tlrHint");
+function tlrSay(cls,msg){ tlrStatus.className="status"+(cls?" "+cls:""); tlrStatus.textContent=msg||""; }
+document.getElementById("tailorBtn").onclick=()=>{
+  tlrCode.value=store.get("rb_code")||""; tlrSay("","");
+  const ids=entryIds();
+  tlrHint.textContent=entries.length? "ids in this bank — "+ids.join(", ") : "No sheet connected yet.";
+  tlr.showModal();
+};
+document.getElementById("tlrClose").onclick=()=>tlr.close();
+document.getElementById("tlrApply").onclick=()=>{
+  const r=applyCode(tlrCode.value);
+  if(!r.ok){ tlrSay("err",r.msg); return; }
+  tlrSay(r.clean?"ok":"err",r.msg);
+  if(r.clean){ setTimeout(()=>tlr.close(),450); toast("Resume tailored"+(state.label?" · "+state.label:"")); }
+};
+document.getElementById("tlrDigest").onclick=()=>{
+  if(!entries.length){ tlrSay("err","Connect a sheet first."); return; }
+  navigator.clipboard.writeText(bankDigest()).then(()=>tlrSay("ok","Digest copied — paste it into a chat with the job description."),()=>tlrSay("err","Clipboard blocked. Open the page in a tab and retry."));
+};
+document.getElementById("tlrLink").onclick=()=>{
+  const u=store.get("rb_url"), code=tlrCode.value.trim();
+  if(!code){ tlrSay("err","Nothing to link — paste a code first."); return; }
+  const link=location.origin+location.pathname+"?"+(u?"sheet="+encodeURIComponent(u)+"&":"")+"code="+encodeURIComponent(code);
+  navigator.clipboard.writeText(link).then(()=>tlrSay("ok","Link copied — opens straight to this build."),()=>tlrSay("err","Clipboard blocked."));
+};
+
 const cfg=document.getElementById("cfg");
 document.getElementById("cfgBtn").onclick=()=>{ document.getElementById("cfgUrl").value=store.get("rb_url")||""; document.getElementById("cfgStatus").textContent=""; cfg.showModal(); };
 document.getElementById("cfgCancel").onclick=()=>cfg.close();
@@ -506,9 +712,11 @@ document.getElementById("cfgSave").onclick=async()=>{ const url=document.getElem
   const err=await loadSheet(url,true); if(err){ st.className="status err"; st.textContent="Couldn't load: "+err; } else { store.set("rb_url",url); st.className="status ok"; st.textContent="Connected."; setTimeout(()=>cfg.close(),500); toast("Connected"); } };
 document.getElementById("refreshBtn").onclick=()=>{ const u=store.get("rb_url"); u?loadSheet(u):document.getElementById("cfgBtn").click(); };
 
-const param=new URLSearchParams(location.search).get("sheet");
-if(param){ store.set("rb_url",param); loadSheet(param,true); }
-else { const saved=store.get("rb_url"); if(saved) loadSheet(saved,true); else { setSource("idle"); render(); } }
+const params=new URLSearchParams(location.search);
+const param=params.get("sheet"), codeParam=params.get("code");
+function afterLoad(){ if(!codeParam||!entries.length) return; const r=applyCode(codeParam); toast(r.ok?("Build code applied"+(state.label?" · "+state.label:"")):r.msg); }
+if(param){ store.set("rb_url",param); loadSheet(param,true).then(afterLoad); }
+else { const saved=store.get("rb_url"); if(saved) loadSheet(saved,true).then(afterLoad); else { setSource("idle"); render(); } }
 </script>
 </body>
 </html>
